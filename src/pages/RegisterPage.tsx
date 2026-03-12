@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react"
 import { Link } from "react-router-dom"
 import { supabase } from "../lib/supabase"
+import { seedDefaultRooms } from "../lib/roomService"
 
 type School = {
   id: string
@@ -9,10 +10,13 @@ type School = {
 }
 
 export default function RegisterPage() {
+  const [registerMode, setRegisterMode] = useState<"guru" | "admin">("guru")
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [schoolId, setSchoolId] = useState("")
+  const [schoolName, setSchoolName] = useState("")
+  const [schoolCode, setSchoolCode] = useState("")
   const [schools, setSchools] = useState<School[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
@@ -39,6 +43,18 @@ export default function RegisterPage() {
     setLoading(true)
     setMessage("")
 
+    if (registerMode === "guru" && !schoolId) {
+      setMessage("Sila pilih sekolah.")
+      setLoading(false)
+      return
+    }
+
+    if (registerMode === "admin" && (!schoolName.trim() || !schoolCode.trim())) {
+      setMessage("Nama sekolah dan kod sekolah wajib diisi.")
+      setLoading(false)
+      return
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -63,19 +79,55 @@ export default function RegisterPage() {
       return
     }
 
+    let newSchoolId = schoolId
+    let role = "guru"
+    let approvalStatus = "pending"
+
+    if (registerMode === "admin") {
+      const { data: schoolData, error: schoolError } = await supabase
+        .from("schools")
+        .insert({
+          school_name: schoolName.trim(),
+          school_code: schoolCode.trim(),
+        })
+        .select()
+        .single()
+
+      if (schoolError) {
+        setMessage("Sekolah gagal didaftarkan: " + schoolError.message)
+        setLoading(false)
+        return
+      }
+
+      newSchoolId = schoolData.id
+
+      try {
+        await seedDefaultRooms(newSchoolId)
+      } catch (seedError: any) {
+        setMessage("Sekolah berjaya didaftarkan tetapi seed bilik gagal: " + (seedError?.message || "Ralat tidak diketahui"))
+        setLoading(false)
+        return
+      }
+
+      role = "admin"
+      approvalStatus = "approved"
+    }
+
     const { error: profileError } = await supabase
       .from("profiles")
       .update({
         full_name: fullName,
         email,
-        school_id: schoolId,
-        role: "guru",
-        approval_status: "pending",
+        school_id: newSchoolId,
+        role,
+        approval_status: approvalStatus,
       })
       .eq("id", userId)
 
     if (profileError) {
       setMessage("Akaun berjaya didaftar, tetapi profil gagal dikemaskini.")
+    } else if (registerMode === "admin") {
+      setMessage("Pendaftaran admin sekolah berjaya. Bilik default telah dimasukkan.")
     } else {
       setMessage("Pendaftaran berjaya. Sila tunggu kelulusan pihak sekolah.")
     }
@@ -89,6 +141,27 @@ export default function RegisterPage() {
       <p>Sistem Tempahan Bilik Khas Sekolah</p>
 
       <form onSubmit={handleRegister} style={{ display: "grid", gap: 12 }}>
+        <div style={{ display: "flex", gap: 12, marginBottom: 4 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <input
+              type="radio"
+              name="registerMode"
+              checked={registerMode === "guru"}
+              onChange={() => setRegisterMode("guru")}
+            />
+            Daftar sebagai Guru
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <input
+              type="radio"
+              name="registerMode"
+              checked={registerMode === "admin"}
+              onChange={() => setRegisterMode("admin")}
+            />
+            Daftar Admin Sekolah Baharu
+          </label>
+        </div>
+
         <input
           type="text"
           placeholder="Nama penuh"
@@ -116,26 +189,48 @@ export default function RegisterPage() {
           style={{ padding: 12, fontSize: 16 }}
         />
 
-        <select
-          value={schoolId}
-          onChange={(e) => setSchoolId(e.target.value)}
-          required
-          style={{ padding: 12, fontSize: 16 }}
-        >
-          <option value="">-- Pilih sekolah --</option>
-          {schools.map((school) => (
-            <option key={school.id} value={school.id}>
-              {school.school_name} ({school.school_code})
-            </option>
-          ))}
-        </select>
+        {registerMode === "guru" ? (
+          <select
+            value={schoolId}
+            onChange={(e) => setSchoolId(e.target.value)}
+            required
+            style={{ padding: 12, fontSize: 16 }}
+          >
+            <option value="">-- Pilih sekolah --</option>
+            {schools.map((school) => (
+              <option key={school.id} value={school.id}>
+                {school.school_name} ({school.school_code})
+              </option>
+            ))}
+          </select>
+        ) : (
+          <>
+            <input
+              type="text"
+              placeholder="Nama sekolah"
+              value={schoolName}
+              onChange={(e) => setSchoolName(e.target.value)}
+              required
+              style={{ padding: 12, fontSize: 16 }}
+            />
+
+            <input
+              type="text"
+              placeholder="Kod sekolah"
+              value={schoolCode}
+              onChange={(e) => setSchoolCode(e.target.value)}
+              required
+              style={{ padding: 12, fontSize: 16 }}
+            />
+          </>
+        )}
 
         <button
           type="submit"
           disabled={loading}
           style={{ padding: 12, fontSize: 16 }}
         >
-          {loading ? "Sedang mendaftar..." : "Daftar"}
+          {loading ? "Sedang mendaftar..." : registerMode === "admin" ? "Daftar Admin Sekolah" : "Daftar"}
         </button>
       </form>
 
