@@ -45,17 +45,15 @@ export default function RegisterPage() {
       return
     }
 
-    let role = "guru"
-    const { count, error: countError } = await supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("school_id", schoolId)
+    const selectedSchool = schools.find((school) => school.id === schoolId)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      schoolId
+    )
 
-    if (!countError) {
-      const isFirstUserForSchool = (count || 0) === 0
-      role = isFirstUserForSchool ? "admin" : "guru"
-    } else {
-      console.error("Ralat semak pengguna pertama sekolah:", countError)
+    if (!selectedSchool || !isUuid) {
+      setMessage("Sekolah tidak sah. Sila pilih sekolah daripada senarai.")
+      setLoading(false)
+      return
     }
 
     const { error } = await supabase.auth.signUp({
@@ -65,7 +63,7 @@ export default function RegisterPage() {
         data: {
           full_name: fullName,
           school_id: schoolId,
-          role,
+          role: "guru",
         },
       },
     })
@@ -118,7 +116,7 @@ export default function RegisterPage() {
           required
           style={{ padding: 12, fontSize: 16 }}
         >
-          <option value="">-- Pilih sekolah --</option>
+          <option value="">Pilih sekolah</option>
           {schools.map((school) => (
             <option key={school.id} value={school.id}>
               {school.school_name} ({school.school_code})
