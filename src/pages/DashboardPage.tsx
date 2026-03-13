@@ -528,8 +528,9 @@ export default function DashboardPage() {
       .eq("id", booking.id)
 
     if (error) {
-      alert("Gagal batalkan tempahan")
-      console.error(error)
+      console.error("CANCEL ERROR:", error)
+      console.error("CANCEL ERROR FULL:", JSON.stringify(error, null, 2))
+      alert(`Gagal batalkan tempahan: ${error.message}`)
       return
     }
 
