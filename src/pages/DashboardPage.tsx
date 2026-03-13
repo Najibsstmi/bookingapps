@@ -94,6 +94,8 @@ export default function DashboardPage() {
     purpose,
     status,
     cancel_reason,
+    cancelled_by,
+    cancelled_at,
     rooms!bookings_room_id_fkey (
       room_name
     )
@@ -110,38 +112,35 @@ export default function DashboardPage() {
 
     if (error) {
       console.error("Ralat load bookings:", error)
-      setBookings([])
       return
     }
 
     const bookingsData = data || []
-    const userIds = [...new Set(bookingsData.map((b: any) => b.user_id).filter(Boolean))]
+    const userIds = [
+      ...new Set(
+        bookingsData
+          .flatMap((b: any) => [b.user_id, b.cancelled_by])
+          .filter(Boolean)
+      ),
+    ]
 
-    if (userIds.length === 0) {
-      setBookings(bookingsData)
-      return
-    }
+    let profileMap = new Map<string, string>()
 
     const { data: profileRows, error: profilesError } = await supabase
       .from("profiles")
       .select("id, full_name")
       .in("id", userIds)
 
-    if (profilesError) {
-      console.error("Profiles error:", profilesError)
-      const fallbackBookings = bookingsData.map((booking: any) => ({
-        ...booking,
-        teacher_name: booking.user_id || "Pengguna",
-      }))
-      setBookings(fallbackBookings)
-      return
+    if (!profilesError && profileRows) {
+      profileMap = new Map(profileRows.map((p: any) => [p.id, p.full_name]))
     }
-
-    const profileMap = new Map((profileRows || []).map((p: any) => [p.id, p.full_name]))
 
     const mergedBookings = bookingsData.map((booking: any) => ({
       ...booking,
       teacher_name: profileMap.get(booking.user_id) || booking.user_id,
+      cancelled_by_name: booking.cancelled_by
+        ? profileMap.get(booking.cancelled_by) || booking.cancelled_by
+        : null,
     }))
 
     setBookings(mergedBookings)
@@ -510,9 +509,18 @@ export default function DashboardPage() {
   }
 
   async function cancelBooking(booking: any) {
-    const reason = prompt("Nyatakan sebab pembatalan")
+    const reason = window.prompt("Masukkan sebab pembatalan tempahan:")
 
-    if (!reason) return
+    if (reason === null) {
+      return
+    }
+
+    const trimmedReason = reason.trim()
+
+    if (!trimmedReason) {
+      alert("Sebab pembatalan wajib diisi.")
+      return
+    }
 
     const { data: authData } = await supabase.auth.getUser()
     const currentUser = authData?.user
@@ -523,18 +531,19 @@ export default function DashboardPage() {
         status: "cancelled",
         cancelled_by: currentUser?.id || null,
         cancelled_at: new Date().toISOString(),
-        cancel_reason: reason,
+        cancel_reason: trimmedReason,
       })
       .eq("id", booking.id)
 
     if (error) {
-      console.error("CANCEL ERROR:", error)
+      alert("Gagal batalkan tempahan: " + error.message)
       console.error("CANCEL ERROR FULL:", JSON.stringify(error, null, 2))
-      alert(`Gagal batalkan tempahan: ${error.message}`)
       return
     }
 
-    await notifyBookingCancelled(booking, reason)
+    alert("Tempahan berjaya dibatalkan.")
+
+    await notifyBookingCancelled(booking, trimmedReason)
     if (profile?.school_id) {
       await loadBookings(profile.school_id, profile.id, profile.role)
     }
@@ -1072,10 +1081,10 @@ export default function DashboardPage() {
                   <div
                     key={booking.id}
                     style={{
-                      border: "1px solid #e2e8f0",
+                      border: booking.status === "cancelled" ? "1px solid #fecaca" : "1px solid #e2e8f0",
                       borderRadius: 14,
                       padding: 16,
-                      background: "#ffffff",
+                      background: booking.status === "cancelled" ? "#fef2f2" : "#ffffff",
                       boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                     }}
                   >
@@ -1175,18 +1184,35 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    {booking.status === "cancelled" && booking.cancel_reason ? (
+                    {booking.status === "cancelled" ? (
                       <div
                         style={{
-                          marginBottom: 12,
-                          padding: 10,
+                          marginTop: 12,
+                          padding: 12,
                           borderRadius: 10,
                           background: "#fff7ed",
                           color: "#9a3412",
-                          fontSize: 13,
+                          fontSize: 14,
+                          display: "grid",
+                          gap: 6,
                         }}
                       >
-                        Sebab batal: {booking.cancel_reason}
+                        <div>
+                          <strong>Sebab batal:</strong> {booking.cancel_reason || "Tiada sebab dinyatakan"}
+                        </div>
+
+                        {booking.cancelled_by_name ? (
+                          <div>
+                            <strong>Dibatalkan oleh:</strong> {booking.cancelled_by_name}
+                          </div>
+                        ) : null}
+
+                        {booking.cancelled_at ? (
+                          <div>
+                            <strong>Tarikh/Tindakan:</strong>{" "}
+                            {new Date(booking.cancelled_at).toLocaleString("ms-MY")}
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
 
