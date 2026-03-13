@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [rooms, setRooms] = useState<Room[]>([])
   const [bookings, setBookings] = useState<any[]>([])
   const [roomBookings, setRoomBookings] = useState<any[]>([])
+  const [selectedSlots, setSelectedSlots] = useState<string[]>([])
   const [currentUserId, setCurrentUserId] = useState("")
   const [roomId, setRoomId] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")
@@ -149,6 +150,7 @@ export default function DashboardPage() {
     : []
 
   const timeSlots = [
+    "07:00",
     "08:00",
     "09:00",
     "10:00",
@@ -159,6 +161,12 @@ export default function DashboardPage() {
     "15:00",
     "16:00",
     "17:00",
+    "18:00",
+    "19:00",
+    "20:00",
+    "21:00",
+    "22:00",
+    "23:00",
   ]
 
   useEffect(() => {
@@ -254,6 +262,7 @@ export default function DashboardPage() {
     } else {
       alert("Tempahan berjaya")
       await loadBookings(profile.school_id)
+      setSelectedSlots([])
       setSelectedCategory("")
       setRoomId("")
       setBookingDate("")
@@ -359,6 +368,46 @@ export default function DashboardPage() {
     return {
       booked: false,
       end: slotEnd,
+    }
+  }
+
+  function handleSlotClick(start: string, end: string, booked: boolean) {
+    if (booked || !end) return
+
+    let updatedSlots = [...selectedSlots]
+
+    if (updatedSlots.includes(start)) {
+      updatedSlots = updatedSlots.filter((s) => s !== start)
+    } else {
+      updatedSlots.push(start)
+    }
+
+    updatedSlots.sort()
+
+    // semak slot berturutan
+    for (let i = 0; i < updatedSlots.length - 1; i++) {
+      const currentIndex = timeSlots.indexOf(updatedSlots[i])
+      const nextIndex = timeSlots.indexOf(updatedSlots[i + 1])
+
+      if (nextIndex !== currentIndex + 1) {
+        alert("Slot yang dipilih mesti berturutan.")
+        return
+      }
+    }
+
+    setSelectedSlots(updatedSlots)
+
+    if (updatedSlots.length > 0) {
+      const firstSlot = updatedSlots[0]
+      const lastSlot = updatedSlots[updatedSlots.length - 1]
+
+      const lastIndex = timeSlots.indexOf(lastSlot)
+
+      setStartTime(firstSlot)
+      setEndTime(timeSlots[lastIndex + 1])
+    } else {
+      setStartTime("")
+      setEndTime("")
     }
   }
 
@@ -522,14 +571,25 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={slot}
+                      onClick={() => handleSlotClick(slot, status?.end || "", Boolean(status?.booked))}
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
                         padding: "10px 12px",
                         borderRadius: 10,
-                        background: status?.booked ? "#fee2e2" : "#dcfce7",
-                        border: status?.booked ? "1px solid #fecaca" : "1px solid #bbf7d0",
+                        background: status?.booked
+                          ? "#fee2e2"
+                          : selectedSlots.includes(slot)
+                          ? "#dbeafe"
+                          : "#dcfce7",
+                        border: status?.booked
+                          ? "1px solid #fecaca"
+                          : selectedSlots.includes(slot)
+                          ? "1px solid #60a5fa"
+                          : "1px solid #bbf7d0",
+                        cursor: status?.booked ? "not-allowed" : "pointer",
+                        opacity: status?.booked ? 0.7 : 1,
                       }}
                     >
                       <div>
@@ -539,9 +599,9 @@ export default function DashboardPage() {
                       </div>
 
                       <div>
-                        {status && status.booked
+                        {status?.booked
                           ? `Ditempah oleh ${status.name}`
-                          : "Kosong"}
+                          : "Tersedia (klik untuk tempah)"}
                       </div>
                     </div>
                   )
