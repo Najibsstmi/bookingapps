@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const [bookings, setBookings] = useState<any[]>([])
   const [currentUserId, setCurrentUserId] = useState("")
   const [roomId, setRoomId] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("")
   const [bookingDate, setBookingDate] = useState("")
   const [startTime, setStartTime] = useState("")
   const [endTime, setEndTime] = useState("")
@@ -133,6 +134,12 @@ export default function DashboardPage() {
 
     initSchoolData()
   }, [profile?.school_id, profile?.role])
+
+  const categories = [...new Set(rooms.map((r) => r.room_category).filter(Boolean))] as string[]
+
+  const filteredRooms = rooms.filter(
+    (room) => room.room_category === selectedCategory
+  )
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -358,13 +365,27 @@ export default function DashboardPage() {
 
         <form onSubmit={handleBooking}>
           <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            required
+            style={fieldStyle}
+          >
+            <option value="">Pilih Kategori</option>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+
+          <select
             value={roomId}
             onChange={(e) => setRoomId(e.target.value)}
             required
             style={fieldStyle}
           >
             <option value="">Pilih Bilik</option>
-            {rooms.map((room) => (
+            {filteredRooms.map((room) => (
               <option key={room.id} value={room.id}>
                 {room.room_name}
               </option>
