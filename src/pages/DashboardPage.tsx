@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [rooms, setRooms] = useState<Room[]>([])
   const [bookings, setBookings] = useState<any[]>([])
+  const [roomBookings, setRoomBookings] = useState<any[]>([])
   const [currentUserId, setCurrentUserId] = useState("")
   const [roomId, setRoomId] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")
@@ -135,11 +136,63 @@ export default function DashboardPage() {
     initSchoolData()
   }, [profile?.school_id, profile?.role])
 
-  const categories = [...new Set(rooms.map((r) => r.room_category).filter(Boolean))] as string[]
+  const categories = [...new Set(
+    rooms
+      .map((room) => room.room_category)
+      .filter((category): category is string => Boolean(category))
+  )].sort((a, b) => a.localeCompare(b))
 
-  const filteredRooms = rooms.filter(
-    (room) => room.room_category === selectedCategory
-  )
+  const filteredRooms = selectedCategory
+    ? rooms
+        .filter((room) => room.room_category === selectedCategory)
+        .sort((a, b) => a.room_name.localeCompare(b.room_name))
+    : []
+
+  const timeSlots = [
+    "08:00",
+    "09:00",
+    "10:00",
+    "11:00",
+    "12:00",
+    "13:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+  ]
+
+  useEffect(() => {
+    setRoomId("")
+  }, [selectedCategory])
+
+  useEffect(() => {
+    if (!roomId || !bookingDate) {
+      setRoomBookings([])
+      return
+    }
+
+    const loadRoomBookings = async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select(`
+          start_time,
+          end_time,
+          booking_date,
+          profiles (
+            full_name
+          )
+        `)
+        .eq("room_id", roomId)
+        .eq("booking_date", bookingDate)
+        .order("start_time", { ascending: true })
+
+      if (!error) {
+        setRoomBookings(data || [])
+      }
+    }
+
+    loadRoomBookings()
+  }, [roomId, bookingDate])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -201,6 +254,7 @@ export default function DashboardPage() {
     } else {
       alert("Tempahan berjaya")
       await loadBookings(profile.school_id)
+      setSelectedCategory("")
       setRoomId("")
       setBookingDate("")
       setStartTime("")
@@ -280,6 +334,32 @@ export default function DashboardPage() {
     background: "#b00020",
     color: "#fff",
     cursor: "pointer",
+  }
+
+  function isSlotBooked(slotStart: string) {
+    const slotIndex = timeSlots.indexOf(slotStart)
+    const slotEnd = timeSlots[slotIndex + 1]
+
+    if (!slotEnd) return null
+
+    const booking = roomBookings.find((b: any) => {
+      return b.start_time.slice(0, 5) <= slotStart && b.end_time.slice(0, 5) > slotStart
+    })
+
+    if (booking) {
+      return {
+        booked: true,
+        end: slotEnd,
+        name: booking.profiles?.full_name || "Pengguna",
+        start: booking.start_time.slice(0, 5),
+        finish: booking.end_time.slice(0, 5),
+      }
+    }
+
+    return {
+      booked: false,
+      end: slotEnd,
+    }
   }
 
   if (loading) {
@@ -370,10 +450,10 @@ export default function DashboardPage() {
             required
             style={fieldStyle}
           >
-            <option value="">Pilih Kategori</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
+            <option value="">Pilih Kategori Bilik</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
               </option>
             ))}
           </select>
@@ -382,9 +462,12 @@ export default function DashboardPage() {
             value={roomId}
             onChange={(e) => setRoomId(e.target.value)}
             required
+            disabled={!selectedCategory}
             style={fieldStyle}
           >
-            <option value="">Pilih Bilik</option>
+            <option value="">
+              {selectedCategory ? "Pilih Bilik" : "Pilih kategori dahulu"}
+            </option>
             {filteredRooms.map((room) => (
               <option key={room.id} value={room.id}>
                 {room.room_name}
@@ -399,6 +482,73 @@ export default function DashboardPage() {
             required
             style={fieldStyle}
           />
+
+          {roomBookings.length > 0 && (
+            <div
+              style={{
+                marginTop: 10,
+                background: "#f1f5f9",
+                padding: 10,
+                borderRadius: 8,
+              }}
+            >
+              <strong>Tempahan pada tarikh ini:</strong>
+
+              {roomBookings.map((b, i) => (
+                <div key={i}>
+                  {b.start_time} - {b.end_time}
+                  {" "} | {b.profiles?.full_name || "Pengguna"}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {roomId && bookingDate && (
+            <div
+              style={{
+                marginTop: 16,
+                background: "#ffffff",
+                borderRadius: 12,
+                padding: 16,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+              }}
+            >
+              <h3 style={{ marginTop: 0 }}>Jadual Slot Bilik</h3>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                {timeSlots.slice(0, -1).map((slot) => {
+                  const status = isSlotBooked(slot)
+
+                  return (
+                    <div
+                      key={slot}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        background: status?.booked ? "#fee2e2" : "#dcfce7",
+                        border: status?.booked ? "1px solid #fecaca" : "1px solid #bbf7d0",
+                      }}
+                    >
+                      <div>
+                        <strong>
+                          {slot} - {status?.end}
+                        </strong>
+                      </div>
+
+                      <div>
+                        {status && status.booked
+                          ? `Ditempah oleh ${status.name}`
+                          : "Kosong"}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           <input
             type="time"
