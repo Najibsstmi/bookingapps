@@ -34,6 +34,7 @@ export default function DashboardPage() {
     topRoom: "",
   })
   const [notifications, setNotifications] = useState<any[]>([])
+  const [pendingUsers, setPendingUsers] = useState<any[]>([])
   const [currentUserId, setCurrentUserId] = useState("")
   const [roomId, setRoomId] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")
@@ -155,6 +156,22 @@ export default function DashboardPage() {
     }
 
     setRooms(data || [])
+  }
+
+  const loadPendingUsers = async (schoolId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, role, approval_status, school_id")
+      .eq("school_id", schoolId)
+      .eq("approval_status", "pending")
+      .order("created_at", { ascending: true })
+
+    if (error) {
+      console.error("Ralat load pending users:", error)
+      return
+    }
+
+    setPendingUsers(data || [])
   }
 
   async function loadNotifications() {
@@ -296,6 +313,16 @@ export default function DashboardPage() {
       await loadRooms(profile.school_id)
       await loadBookings(profile.school_id)
       await loadNotifications()
+
+      if (
+        profile.role === "admin" ||
+        profile.role === "pengetua" ||
+        profile.role === "penolong_kanan"
+      ) {
+        await loadPendingUsers(profile.school_id)
+      } else {
+        setPendingUsers([])
+      }
     }
 
     initSchoolData()
@@ -373,6 +400,28 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     window.location.href = "/login"
+  }
+
+  const approveUser = async (userId: string) => {
+    const confirmed = window.confirm("Luluskan pengguna ini?")
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ approval_status: "approved" })
+      .eq("id", userId)
+
+    if (error) {
+      alert("Gagal meluluskan pengguna.")
+      console.error(error)
+      return
+    }
+
+    alert("Pengguna berjaya diluluskan.")
+
+    if (profile?.school_id) {
+      await loadPendingUsers(profile.school_id)
+    }
   }
 
   async function approveBooking(booking: any) {
@@ -638,6 +687,15 @@ export default function DashboardPage() {
     color: "#0f172a",
   }
 
+  const isAdmin =
+    profile?.role === "admin" ||
+    profile?.role === "pengetua" ||
+    profile?.role === "penolong_kanan"
+
+  const isGuru = profile?.role === "guru"
+
+  const isPending = profile?.approval_status === "pending"
+
   const fieldStyle = {
     width: "100%",
     maxWidth: 420,
@@ -732,6 +790,26 @@ export default function DashboardPage() {
     return <div style={{ padding: 24 }}>Profil tidak dijumpai.</div>
   }
 
+  if (isPending) {
+    return (
+      <div style={{ maxWidth: 900, margin: "40px auto", padding: 16 }}>
+        <div style={cardStyle}>
+          <h1 style={{ marginTop: 0 }}>Akaun Menunggu Kelulusan</h1>
+          <p>
+            Akaun anda telah berjaya didaftarkan tetapi masih menunggu kelulusan
+            admin sekolah.
+          </p>
+          <p>
+            Anda akan boleh menggunakan sistem selepas akaun ini diluluskan.
+          </p>
+          <button onClick={handleLogout} style={primaryButtonStyle}>
+            Log Keluar
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       style={{
@@ -786,10 +864,59 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {(profile?.role === "admin" ||
-        profile?.role === "school_admin" ||
-        profile?.role === "pengetua" ||
-        profile?.role === "penolong_kanan") && (
+      {isAdmin ? (
+        <div style={cardStyle}>
+          <h2 style={{ marginTop: 0 }}>Pengguna Menunggu Kelulusan</h2>
+
+          {pendingUsers.length === 0 ? (
+            <p style={{ color: "#64748b" }}>Tiada pengguna menunggu kelulusan.</p>
+          ) : (
+            <div style={{ display: "grid", gap: 12 }}>
+              {pendingUsers.map((user) => (
+                <div
+                  key={user.id}
+                  style={{
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 12,
+                    padding: 14,
+                    background: "#fff",
+                    display: "grid",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ fontWeight: 700, color: "#0f172a" }}>
+                    {user.full_name || "Tanpa Nama"}
+                  </div>
+                  <div style={{ fontSize: 14, color: "#475569" }}>
+                    Emel: {user.email || "-"}
+                  </div>
+                  <div style={{ fontSize: 14, color: "#475569" }}>
+                    Peranan: {user.role || "-"}
+                  </div>
+                  <div style={{ fontSize: 14, color: "#b45309", fontWeight: 600 }}>
+                    Status: Menunggu Kelulusan
+                  </div>
+
+                  <div style={{ marginTop: 4 }}>
+                    <button
+                      type="button"
+                      onClick={() => approveUser(user.id)}
+                      style={{
+                        ...primaryButtonStyle,
+                        background: "#15803d",
+                      }}
+                    >
+                      Luluskan Pengguna
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {isAdmin ? (
         <div
           style={{
             display: "grid",
@@ -836,9 +963,9 @@ export default function DashboardPage() {
             </h2>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {profile.role === "admin" && (
+      {isAdmin ? (
         <div style={cardStyle}>
           <h2 style={{ marginTop: 0 }}>Tambah Bilik</h2>
 
@@ -872,229 +999,231 @@ export default function DashboardPage() {
             </button>
           </form>
         </div>
-      )}
+      ) : null}
 
-      <div style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Senarai Bilik</h2>
-        {rooms.length === 0 ? (
-          <p>Belum ada bilik.</p>
-        ) : (
-          <ul>
-            {rooms.map((room) => (
-              <li key={room.id}>
-                {room.room_name}
-                <button
-                  onClick={() => toggleRoom(room.id, Boolean(room.is_active))}
-                  style={{
-                    marginLeft: 10,
-                    padding: "6px 10px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: room.is_active ? "#f59e0b" : "#10b981",
-                    color: "#fff",
-                    cursor: "pointer",
-                  }}
-                >
-                  {room.is_active ? "Nyahaktifkan" : "Aktifkan"}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div style={cardStyle}>
-        <h2 style={sectionTitleStyle}>Senarai Tempahan</h2>
-
-        {bookings.length === 0 ? (
-          <p style={{ color: "#64748b" }}>Belum ada tempahan.</p>
-        ) : (
-          <div style={{ display: "grid", gap: 14 }}>
-            {bookings.map((booking: any) => {
-              const canManage =
-                profile?.role === "admin" ||
-                profile?.role === "pengetua" ||
-                profile?.role === "penolong_kanan"
-
-              const statusLabel =
-                booking.status === "approved"
-                  ? "Diluluskan"
-                  : booking.status === "cancelled"
-                  ? "Dibatalkan"
-                  : "Menunggu Kelulusan"
-
-              const statusColor =
-                booking.status === "approved"
-                  ? "#15803d"
-                  : booking.status === "cancelled"
-                  ? "#b91c1c"
-                  : "#b45309"
-
-              const badgeBg =
-                booking.status === "approved"
-                  ? "#dcfce7"
-                  : booking.status === "cancelled"
-                  ? "#fee2e2"
-                  : "#fef3c7"
-
-              return (
-                <div
-                  key={booking.id}
-                  style={{
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 14,
-                    padding: 16,
-                    background: "#ffffff",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                  }}
-                >
-                  <div
+      {isAdmin ? (
+        <div style={cardStyle}>
+          <h2 style={{ marginTop: 0 }}>Senarai Bilik</h2>
+          {rooms.length === 0 ? (
+            <p>Belum ada bilik.</p>
+          ) : (
+            <ul>
+              {rooms.map((room) => (
+                <li key={room.id}>
+                  {room.room_name}
+                  <button
+                    onClick={() => toggleRoom(room.id, Boolean(room.is_active))}
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      gap: 12,
-                      flexWrap: "wrap",
-                      marginBottom: 12,
+                      marginLeft: 10,
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      border: "none",
+                      background: room.is_active ? "#f59e0b" : "#10b981",
+                      color: "#fff",
+                      cursor: "pointer",
                     }}
                   >
-                    <div>
+                    {room.is_active ? "Nyahaktifkan" : "Aktifkan"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
+
+      {isAdmin ? (
+        <div style={cardStyle}>
+          <h2 style={sectionTitleStyle}>Senarai Tempahan</h2>
+
+          {bookings.length === 0 ? (
+            <p style={{ color: "#64748b" }}>Belum ada tempahan.</p>
+          ) : (
+            <div style={{ display: "grid", gap: 14 }}>
+              {bookings.map((booking: any) => {
+                const canManage = isAdmin
+
+                const statusLabel =
+                  booking.status === "approved"
+                    ? "Diluluskan"
+                    : booking.status === "cancelled"
+                    ? "Dibatalkan"
+                    : "Menunggu Kelulusan"
+
+                const statusColor =
+                  booking.status === "approved"
+                    ? "#15803d"
+                    : booking.status === "cancelled"
+                    ? "#b91c1c"
+                    : "#b45309"
+
+                const badgeBg =
+                  booking.status === "approved"
+                    ? "#dcfce7"
+                    : booking.status === "cancelled"
+                    ? "#fee2e2"
+                    : "#fef3c7"
+
+                return (
+                  <div
+                    key={booking.id}
+                    style={{
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 14,
+                      padding: 16,
+                      background: "#ffffff",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        marginBottom: 12,
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 700,
+                            color: "#0f172a",
+                            marginBottom: 4,
+                          }}
+                        >
+                          {booking.rooms?.room_name || "Bilik tidak diketahui"}
+                        </div>
+                        <div style={{ fontSize: 13, color: "#64748b" }}>
+                          Guru: {booking.teacher_name || "Pengguna"}
+                        </div>
+                      </div>
+
+                      <span
+                        style={{
+                          background: badgeBg,
+                          color: statusColor,
+                          fontWeight: 700,
+                          fontSize: 12,
+                          padding: "6px 10px",
+                          borderRadius: 999,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {statusLabel}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                        gap: 10,
+                        marginBottom: 12,
+                      }}
+                    >
                       <div
                         style={{
-                          fontSize: 16,
-                          fontWeight: 700,
-                          color: "#0f172a",
-                          marginBottom: 4,
+                          background: "#f8fafc",
+                          borderRadius: 10,
+                          padding: 10,
                         }}
                       >
-                        {booking.rooms?.room_name || "Bilik tidak diketahui"}
+                        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
+                          Tarikh
+                        </div>
+                        <div style={{ fontWeight: 600, color: "#0f172a" }}>
+                          {booking.booking_date}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 13, color: "#64748b" }}>
-                        Guru: {booking.teacher_name || "Pengguna"}
-                      </div>
-                    </div>
 
-                    <span
-                      style={{
-                        background: badgeBg,
-                        color: statusColor,
-                        fontWeight: 700,
-                        fontSize: 12,
-                        padding: "6px 10px",
-                        borderRadius: 999,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {statusLabel}
-                    </span>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                      gap: 10,
-                      marginBottom: 12,
-                    }}
-                  >
-                    <div
-                      style={{
-                        background: "#f8fafc",
-                        borderRadius: 10,
-                        padding: 10,
-                      }}
-                    >
-                      <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
-                        Tarikh
-                      </div>
-                      <div style={{ fontWeight: 600, color: "#0f172a" }}>
-                        {booking.booking_date}
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        background: "#f8fafc",
-                        borderRadius: 10,
-                        padding: 10,
-                      }}
-                    >
-                      <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
-                        Masa
-                      </div>
-                      <div style={{ fontWeight: 600, color: "#0f172a" }}>
-                        {String(booking.start_time).slice(0, 5)} -{" "}
-                        {String(booking.end_time).slice(0, 5)}
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        background: "#f8fafc",
-                        borderRadius: 10,
-                        padding: 10,
-                      }}
-                    >
-                      <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
-                        Tujuan
-                      </div>
-                      <div style={{ fontWeight: 600, color: "#0f172a" }}>
-                        {booking.purpose || "-"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {booking.status === "cancelled" && booking.cancel_reason ? (
-                    <div
-                      style={{
-                        marginBottom: 12,
-                        padding: 10,
-                        borderRadius: 10,
-                        background: "#fff7ed",
-                        color: "#9a3412",
-                        fontSize: 13,
-                      }}
-                    >
-                      Sebab batal: {booking.cancel_reason}
-                    </div>
-                  ) : null}
-
-                  {canManage && booking.status === "pending" ? (
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <button
-                        onClick={() => approveBooking(booking)}
-                        type="button"
+                      <div
                         style={{
-                          ...primaryButtonStyle,
-                          background: "#15803d",
+                          background: "#f8fafc",
+                          borderRadius: 10,
+                          padding: 10,
                         }}
                       >
-                        Luluskan
-                      </button>
+                        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
+                          Masa
+                        </div>
+                        <div style={{ fontWeight: 600, color: "#0f172a" }}>
+                          {String(booking.start_time).slice(0, 5)} -{" "}
+                          {String(booking.end_time).slice(0, 5)}
+                        </div>
+                      </div>
 
-                      <button
-                        onClick={() => cancelBooking(booking)}
-                        type="button"
+                      <div
                         style={{
-                          ...primaryButtonStyle,
-                          background: "#b91c1c",
+                          background: "#f8fafc",
+                          borderRadius: 10,
+                          padding: 10,
                         }}
                       >
-                        Batalkan
-                      </button>
+                        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
+                          Tujuan
+                        </div>
+                        <div style={{ fontWeight: 600, color: "#0f172a" }}>
+                          {booking.purpose || "-"}
+                        </div>
+                      </div>
                     </div>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
 
-      <div style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Tempah Bilik</h2>
+                    {booking.status === "cancelled" && booking.cancel_reason ? (
+                      <div
+                        style={{
+                          marginBottom: 12,
+                          padding: 10,
+                          borderRadius: 10,
+                          background: "#fff7ed",
+                          color: "#9a3412",
+                          fontSize: 13,
+                        }}
+                      >
+                        Sebab batal: {booking.cancel_reason}
+                      </div>
+                    ) : null}
 
-        <form onSubmit={handleBooking}>
+                    {canManage && booking.status === "pending" ? (
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        <button
+                          onClick={() => approveBooking(booking)}
+                          type="button"
+                          style={{
+                            ...primaryButtonStyle,
+                            background: "#15803d",
+                          }}
+                        >
+                          Luluskan
+                        </button>
+
+                        <button
+                          onClick={() => cancelBooking(booking)}
+                          type="button"
+                          style={{
+                            ...primaryButtonStyle,
+                            background: "#b91c1c",
+                          }}
+                        >
+                          Batalkan
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {!isPending && (isAdmin || isGuru) ? (
+        <div style={cardStyle}>
+          <h2 style={{ marginTop: 0 }}>Tempah Bilik</h2>
+
+          <form onSubmit={handleBooking}>
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -1238,8 +1367,9 @@ export default function DashboardPage() {
           <button type="submit" style={primaryButtonStyle}>
             Tempah Sekarang
           </button>
-        </form>
-      </div>
+          </form>
+        </div>
+      ) : null}
     </div>
   )
 }

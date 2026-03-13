@@ -9,6 +9,7 @@ type School = {
 }
 
 export default function RegisterPage() {
+  const [registerMode] = useState<"guru" | "admin">("guru")
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -56,20 +57,22 @@ export default function RegisterPage() {
       return
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           full_name: fullName,
-          school_id: schoolId,
-          role: "guru",
+          school_id: registerMode === "guru" ? schoolId : "",
+          role: registerMode === "admin" ? "admin" : "guru",
         },
       },
     })
 
     if (error) {
       setMessage(error.message)
+    } else if (!data.user) {
+      setMessage("Pendaftaran berjaya. Sila semak emel atau log masuk.")
     } else {
       setMessage("Pendaftaran berjaya. Sila semak emel atau log masuk.")
     }
@@ -116,7 +119,7 @@ export default function RegisterPage() {
           required
           style={{ padding: 12, fontSize: 16 }}
         >
-          <option value="">Pilih sekolah</option>
+          <option value="">-- Pilih sekolah --</option>
           {schools.map((school) => (
             <option key={school.id} value={school.id}>
               {school.school_name} ({school.school_code})
