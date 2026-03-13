@@ -75,9 +75,7 @@ export default function DashboardPage() {
   }, [])
 
   async function loadBookings(schoolId?: string) {
-    if (!schoolId) {
-      return
-    }
+    if (!schoolId) return
 
     const { data, error } = await supabase
       .from("bookings")
@@ -106,6 +104,7 @@ export default function DashboardPage() {
 
     if (error) {
       console.error("Bookings error:", error)
+      setBookings([])
       return
     }
 
@@ -420,7 +419,9 @@ export default function DashboardPage() {
         .in("id", ids)
     }
 
-    await loadBookings(profile?.school_id)
+    if (profile?.school_id) {
+      await loadBookings(profile.school_id)
+    }
     await loadNotifications()
   }
 
@@ -449,7 +450,9 @@ export default function DashboardPage() {
     }
 
     await notifyBookingCancelled(booking, reason)
-    await loadBookings(profile?.school_id)
+    if (profile?.school_id) {
+      await loadBookings(profile.school_id)
+    }
     await loadNotifications()
   }
 
