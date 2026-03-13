@@ -89,12 +89,10 @@ export default function DashboardPage() {
     purpose,
     status,
     cancel_reason,
-    approved_by,
-    cancelled_by,
-    rooms!bookings_room_id_fkey (
+    rooms (
       room_name
     ),
-    profiles!bookings_user_id_fkey (
+    profiles (
       full_name
     )
   `)
@@ -1025,98 +1023,48 @@ export default function DashboardPage() {
         {bookings.length === 0 ? (
           <p>Belum ada tempahan.</p>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Tarikh</th>
-                <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Masa</th>
-                <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Bilik</th>
-                <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Guru</th>
-                <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Tujuan</th>
-                <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Status</th>
-                <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Tindakan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.map((booking) => (
-                <tr key={booking.id}>
-                  <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>{booking.booking_date}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                    {booking.start_time} - {booking.end_time}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                    {booking.rooms?.room_name || "-"}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                    {booking.profiles?.full_name || "-"}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                    {booking.purpose || "Tiada tujuan"}
-                    {booking.status === "cancelled" && booking.cancel_reason && (
-                      <div style={{ color: "#b91c1c", marginTop: 4 }}>
-                        Sebab batal: {booking.cancel_reason}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                    <span
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: 6,
-                        background:
-                          booking.status === "approved"
-                            ? "#dcfce7"
-                            : booking.status === "cancelled"
-                            ? "#fee2e2"
-                            : "#fef9c3",
-                      }}
-                    >
-                      {booking.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                    {["admin", "pengetua", "penolong_kanan"].includes(profile.role) &&
-                      booking.status === "pending" && (
-                        <button
-                          type="button"
-                          onClick={() => approveBooking(booking)}
-                          style={{
-                            marginLeft: 10,
-                            padding: "6px 10px",
-                            borderRadius: 6,
-                            border: "none",
-                            background: "#22c55e",
-                            color: "#fff",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Luluskan
-                        </button>
-                      )}
+          <div style={{ display: "grid", gap: 12 }}>
+            {bookings.map((booking: any) => (
+              <div
+                key={booking.id}
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 12,
+                  padding: 14,
+                  background: "#fff",
+                }}
+              >
+                <strong>{booking.rooms?.room_name || "Bilik"}</strong>
+                <div>Tarikh: {booking.booking_date}</div>
+                <div>Masa: {booking.start_time} - {booking.end_time}</div>
+                <div>Tujuan: {booking.purpose || "-"}</div>
+                <div>Status: {booking.status}</div>
+                <div>Guru: {booking.profiles?.full_name || "Tidak diketahui"}</div>
 
-                    {["admin", "pengetua", "penolong_kanan"].includes(profile.role) &&
-                      booking.status !== "cancelled" && (
-                        <button
-                          type="button"
-                          onClick={() => cancelBooking(booking)}
-                          style={{
-                            marginLeft: 10,
-                            padding: "6px 10px",
-                            borderRadius: 6,
-                            border: "none",
-                            background: "#ef4444",
-                            color: "#fff",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Batalkan
-                        </button>
-                      )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                {(profile?.role === "admin" ||
+                  profile?.role === "school_admin" ||
+                  profile?.role === "pengetua" ||
+                  profile?.role === "penolong_kanan") &&
+                  booking.status === "pending" && (
+                    <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                      <button type="button" onClick={() => approveBooking(booking)} style={primaryButtonStyle}>
+                        Luluskan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => cancelBooking(booking)}
+                        style={{
+                          ...primaryButtonStyle,
+                          background: "#b91c1c",
+                        }}
+                      >
+                        Batalkan
+                      </button>
+                    </div>
+                  )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
