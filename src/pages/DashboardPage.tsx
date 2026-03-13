@@ -52,6 +52,8 @@ export default function DashboardPage() {
         data: { user },
       } = await supabase.auth.getUser()
 
+      console.log("SESSION USER:", user)
+
       if (!user) {
         setLoading(false)
         return
@@ -59,14 +61,17 @@ export default function DashboardPage() {
 
       setCurrentUserId(user.id)
 
-      const { data, error } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("id, full_name, email, role, approval_status, school_id")
         .eq("id", user.id)
         .single()
 
-      if (!error) {
-        setProfile(data)
+      console.log("PROFILE DATA:", profileData)
+      console.log("PROFILE ERROR:", profileError)
+
+      if (!profileError) {
+        setProfile(profileData)
       }
 
       setLoading(false)
@@ -75,10 +80,8 @@ export default function DashboardPage() {
     loadProfile()
   }, [])
 
-  async function loadBookings(schoolId?: string) {
-    if (!schoolId) return
-
-    const { data, error } = await supabase
+  async function loadBookings(schoolIdValue: string, currentUserId?: string, currentRole?: string) {
+    let query = supabase
       .from("bookings")
       .select(`
     id,
@@ -91,16 +94,22 @@ export default function DashboardPage() {
     purpose,
     status,
     cancel_reason,
-    rooms (
+    rooms!bookings_room_id_fkey (
       room_name
     )
   `)
-      .eq("school_id", schoolId)
+      .eq("school_id", schoolIdValue)
       .order("booking_date", { ascending: true })
       .order("start_time", { ascending: true })
 
+    if (currentRole === "guru" && currentUserId) {
+      query = query.eq("user_id", currentUserId)
+    }
+
+    const { data, error } = await query
+
     if (error) {
-      console.error("Bookings error:", error)
+      console.error("Ralat load bookings:", error)
       setBookings([])
       return
     }
@@ -311,7 +320,7 @@ export default function DashboardPage() {
       }
 
       await loadRooms(profile.school_id)
-      await loadBookings(profile.school_id)
+      await loadBookings(profile.school_id, profile.id, profile.role)
       await loadNotifications()
 
       if (
@@ -326,7 +335,7 @@ export default function DashboardPage() {
     }
 
     initSchoolData()
-  }, [profile?.school_id, profile?.role])
+  }, [profile?.id, profile?.school_id, profile?.role])
 
   const categories = [...new Set(
     rooms
@@ -495,7 +504,7 @@ export default function DashboardPage() {
     }
 
     if (profile?.school_id) {
-      await loadBookings(profile.school_id)
+      await loadBookings(profile.school_id, profile.id, profile.role)
     }
     await loadNotifications()
   }
@@ -526,7 +535,7 @@ export default function DashboardPage() {
 
     await notifyBookingCancelled(booking, reason)
     if (profile?.school_id) {
-      await loadBookings(profile.school_id)
+      await loadBookings(profile.school_id, profile.id, profile.role)
     }
     await loadNotifications()
   }
@@ -599,7 +608,7 @@ export default function DashboardPage() {
       })
 
       alert("Tempahan berjaya")
-      await loadBookings(profile.school_id)
+      await loadBookings(profile.school_id, profile.id, profile.role)
       await loadNotifications()
       setSelectedSlots([])
       setSelectedCategory("")
@@ -679,20 +688,14 @@ export default function DashboardPage() {
     marginBottom: 24,
   }
 
-  const sectionTitleStyle = {
-    marginTop: 0,
-    marginBottom: 16,
-    fontSize: 20,
-    fontWeight: 700,
-    color: "#0f172a",
-  }
-
   const isAdmin =
     profile?.role === "admin" ||
     profile?.role === "pengetua" ||
     profile?.role === "penolong_kanan"
 
   const isGuru = profile?.role === "guru"
+
+  const isApproved = profile?.approval_status === "approved"
 
   const isPending = profile?.approval_status === "pending"
 
@@ -1032,17 +1035,17 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      {isAdmin ? (
+      {isApproved && (isAdmin || isGuru) ? (
         <div style={cardStyle}>
-          <h2 style={sectionTitleStyle}>Senarai Tempahan</h2>
+          <h2 style={{ marginTop: 0 }}>
+            {isAdmin ? "Senarai Semua Tempahan" : "Tempahan Saya"}
+          </h2>
 
           {bookings.length === 0 ? (
             <p style={{ color: "#64748b" }}>Belum ada tempahan.</p>
           ) : (
             <div style={{ display: "grid", gap: 14 }}>
               {bookings.map((booking: any) => {
-                const canManage = isAdmin
-
                 const statusLabel =
                   booking.status === "approved"
                     ? "Diluluskan"
@@ -1186,7 +1189,7 @@ export default function DashboardPage() {
                       </div>
                     ) : null}
 
-                    {canManage && booking.status === "pending" ? (
+                    {isAdmin && booking.status === "pending" ? (
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                         <button
                           onClick={() => approveBooking(booking)}
@@ -1219,7 +1222,7 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      {!isPending && (isAdmin || isGuru) ? (
+      {isApproved && (isAdmin || isGuru) ? (
         <div style={cardStyle}>
           <h2 style={{ marginTop: 0 }}>Tempah Bilik</h2>
 
