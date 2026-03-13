@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { supabase } from "../lib/supabase"
 import { seedDefaultRooms } from "../lib/roomService"
+import { createNotification } from "../lib/notificationService"
 
 type Room = {
   id: string
@@ -8,9 +9,11 @@ type Room = {
   room_name: string
   room_category: string | null
   capacity: number | null
+  is_active?: boolean
 }
 
 type Profile = {
+  id: string
   full_name: string
   email: string
   role: string
@@ -25,6 +28,12 @@ export default function DashboardPage() {
   const [bookings, setBookings] = useState<any[]>([])
   const [roomBookings, setRoomBookings] = useState<any[]>([])
   const [selectedSlots, setSelectedSlots] = useState<string[]>([])
+  const [stats, setStats] = useState({
+    totalRooms: 0,
+    upcomingBookings: 0,
+    topRoom: "",
+  })
+  const [notifications, setNotifications] = useState<any[]>([])
   const [currentUserId, setCurrentUserId] = useState("")
   const [roomId, setRoomId] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")
@@ -51,7 +60,7 @@ export default function DashboardPage() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, email, role, approval_status, school_id")
+        .select("id, full_name, email, role, approval_status, school_id")
         .eq("id", user.id)
         .single()
 
@@ -106,6 +115,7 @@ export default function DashboardPage() {
       .from("rooms")
       .select("*")
       .eq("school_id", schoolId)
+      .eq("is_active", true)
       .order("room_name", { ascending: true })
 
     if (error) {
@@ -114,6 +124,112 @@ export default function DashboardPage() {
     }
 
     setRooms(data || [])
+  }
+
+  async function loadNotifications() {
+    const { data: authData } = await supabase.auth.getUser()
+    const user = authData?.user
+
+    if (!user) return
+
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(10)
+
+    if (error) {
+      console.error("Notifications error:", error)
+      return
+    }
+
+    setNotifications(data || [])
+  }
+
+  async function notifyBookingCreated({
+    schoolId,
+    bookingDate,
+    startTime,
+    endTime,
+    roomName,
+    teacherName,
+    teacherId,
+  }: {
+    schoolId: string
+    bookingDate: string
+    startTime: string
+    endTime: string
+    roomName: string
+    teacherName: string
+    teacherId: string
+  }) {
+    const { data: approvers, error } = await supabase
+      .from("profiles")
+      .select("id, role")
+      .eq("school_id", schoolId)
+      .in("role", ["admin", "pengetua", "penolong_kanan"])
+
+    if (error) {
+      console.error("Approver notification error:", error)
+      return
+    }
+
+    const approverNotifications =
+      approvers?.map((person: any) =>
+        createNotification({
+          userId: person.id,
+          title: "Tempahan baharu",
+          message: `${teacherName} membuat tempahan ${roomName} pada ${bookingDate}, ${startTime} - ${endTime}.`,
+        })
+      ) || []
+
+    const teacherNotification = createNotification({
+      userId: teacherId,
+      title: "Tempahan berjaya dihantar",
+      message: `Tempahan anda untuk ${roomName} pada ${bookingDate}, ${startTime} - ${endTime} sedang menunggu kelulusan.`,
+    })
+
+    await Promise.all([...approverNotifications, teacherNotification])
+  }
+
+  async function loadStats(currentSchoolId?: string) {
+    const schoolIdToUse = currentSchoolId || profile?.school_id
+
+    if (!schoolIdToUse) return
+
+    const today = new Date().toISOString().split("T")[0]
+
+    const activeRooms = rooms.filter((room: any) => room.is_active !== false)
+
+    const upcoming = bookings.filter(
+      (booking: any) => booking.booking_date >= today
+    )
+
+    const roomCountMap: Record<string, number> = {}
+
+    bookings.forEach((booking: any) => {
+      const roomName = booking.rooms?.room_name
+      if (!roomName) return
+
+      roomCountMap[roomName] = (roomCountMap[roomName] || 0) + 1
+    })
+
+    let topRoom = ""
+    let maxCount = 0
+
+    Object.entries(roomCountMap).forEach(([roomName, count]) => {
+      if (count > maxCount) {
+        maxCount = count
+        topRoom = `${roomName} (${count})`
+      }
+    })
+
+    setStats({
+      totalRooms: activeRooms.length,
+      upcomingBookings: upcoming.length,
+      topRoom: topRoom || "Belum ada data",
+    })
   }
 
   useEffect(() => {
@@ -132,6 +248,7 @@ export default function DashboardPage() {
 
       await loadRooms(profile.school_id)
       await loadBookings(profile.school_id)
+      await loadNotifications()
     }
 
     initSchoolData()
@@ -202,28 +319,53 @@ export default function DashboardPage() {
     loadRoomBookings()
   }, [roomId, bookingDate])
 
+  useEffect(() => {
+    loadStats()
+  }, [rooms, bookings])
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     window.location.href = "/login"
   }
 
-  async function cancelBooking(id: string) {
-    const confirmDelete = confirm("Padam tempahan ini?")
+  async function approveBooking(bookingId: string) {
+    const confirmApprove = confirm("Luluskan tempahan ini?")
 
-    if (!confirmDelete) return
+    if (!confirmApprove) return
 
     const { error } = await supabase
       .from("bookings")
-      .delete()
-      .eq("id", id)
+      .update({
+        status: "approved",
+      })
+      .eq("id", bookingId)
 
     if (error) {
-      alert("Gagal padam tempahan")
-      console.error(error)
-    } else {
-      alert("Tempahan dibatalkan")
-      loadBookings(profile?.school_id)
+      alert("Gagal meluluskan tempahan")
+      return
     }
+
+    await loadBookings(profile?.school_id)
+  }
+
+  async function cancelBooking(bookingId: string) {
+    const reason = prompt("Nyatakan sebab pembatalan")
+
+    if (!reason) return
+
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        status: "cancelled",
+      })
+      .eq("id", bookingId)
+
+    if (error) {
+      alert("Gagal batalkan tempahan")
+      return
+    }
+
+    await loadBookings(profile?.school_id)
   }
 
   async function handleBooking(e: React.FormEvent) {
@@ -254,14 +396,28 @@ export default function DashboardPage() {
         start_time: startTime,
         end_time: endTime,
         purpose: purpose,
+        status: "pending",
       })
 
     if (error) {
       alert("Tempahan gagal: " + error.message)
       console.error("Booking error:", error)
     } else {
+      const selectedRoom = rooms.find((room: any) => room.id === roomId)
+
+      await notifyBookingCreated({
+        schoolId: profile.school_id,
+        bookingDate,
+        startTime,
+        endTime,
+        roomName: selectedRoom?.room_name || "Bilik",
+        teacherName: profile.full_name || "Pengguna",
+        teacherId: profile.id,
+      })
+
       alert("Tempahan berjaya")
       await loadBookings(profile.school_id)
+      await loadNotifications()
       setSelectedSlots([])
       setSelectedCategory("")
       setRoomId("")
@@ -308,6 +464,30 @@ export default function DashboardPage() {
     await loadRooms(profile.school_id)
   }
 
+  async function toggleRoom(roomId: string, currentStatus: boolean) {
+    const confirmAction = confirm(
+      currentStatus
+        ? "Nyahaktifkan bilik ini?"
+        : "Aktifkan semula bilik ini?"
+    )
+
+    if (!confirmAction) return
+
+    const { error } = await supabase
+      .from("rooms")
+      .update({
+        is_active: !currentStatus,
+      })
+      .eq("id", roomId)
+
+    if (error) {
+      alert("Gagal kemaskini bilik")
+      return
+    }
+
+    await loadRooms(profile?.school_id)
+  }
+
   const cardStyle = {
     background: "#ffffff",
     borderRadius: 16,
@@ -333,15 +513,6 @@ export default function DashboardPage() {
     background: "#1d3557",
     color: "#fff",
     fontWeight: 700,
-    cursor: "pointer",
-  }
-
-  const cancelButtonStyle = {
-    padding: "8px 12px",
-    borderRadius: 8,
-    border: "none",
-    background: "#b00020",
-    color: "#fff",
     cursor: "pointer",
   }
 
@@ -440,6 +611,91 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 16,
+          padding: 24,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+          marginBottom: 24,
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>Notifikasi</h2>
+
+        {notifications.length === 0 ? (
+          <p>Belum ada notifikasi.</p>
+        ) : (
+          <div style={{ display: "grid", gap: 12 }}>
+            {notifications.map((notification) => (
+              <div
+                key={notification.id}
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  background: notification.is_read ? "#f8fafc" : "#eff6ff",
+                  border: "1px solid #dbeafe",
+                }}
+              >
+                <strong>{notification.title}</strong>
+                <p style={{ margin: "6px 0 0 0" }}>{notification.message}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {(profile?.role === "admin" ||
+        profile?.role === "school_admin" ||
+        profile?.role === "pengetua" ||
+        profile?.role === "penolong_kanan") && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 16,
+            marginBottom: 24,
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              padding: 20,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+            }}
+          >
+            <p style={{ margin: 0, color: "#666" }}>Jumlah Bilik Aktif</p>
+            <h2 style={{ margin: "8px 0 0 0" }}>{stats.totalRooms}</h2>
+          </div>
+
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              padding: 20,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+            }}
+          >
+            <p style={{ margin: 0, color: "#666" }}>Tempahan Akan Datang</p>
+            <h2 style={{ margin: "8px 0 0 0" }}>{stats.upcomingBookings}</h2>
+          </div>
+
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              padding: 20,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+            }}
+          >
+            <p style={{ margin: 0, color: "#666" }}>Bilik Paling Digunakan</p>
+            <h2 style={{ margin: "8px 0 0 0", fontSize: 20 }}>
+              {stats.topRoom}
+            </h2>
+          </div>
+        </div>
+      )}
+
       {profile.role === "admin" && (
         <div style={cardStyle}>
           <h2 style={{ marginTop: 0 }}>Tambah Bilik</h2>
@@ -483,7 +739,23 @@ export default function DashboardPage() {
         ) : (
           <ul>
             {rooms.map((room) => (
-              <li key={room.id}>{room.room_name}</li>
+              <li key={room.id}>
+                {room.room_name}
+                <button
+                  onClick={() => toggleRoom(room.id, Boolean(room.is_active))}
+                  style={{
+                    marginLeft: 10,
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    border: "none",
+                    background: room.is_active ? "#f59e0b" : "#10b981",
+                    color: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  {room.is_active ? "Nyahaktifkan" : "Aktifkan"}
+                </button>
+              </li>
             ))}
           </ul>
         )}
@@ -670,14 +942,59 @@ export default function DashboardPage() {
                     {booking.purpose || "Tiada tujuan"}
                   </td>
                   <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                    {booking.status}
+                    <span
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: 6,
+                        background:
+                          booking.status === "approved"
+                            ? "#dcfce7"
+                            : booking.status === "cancelled"
+                            ? "#fee2e2"
+                            : "#fef9c3",
+                      }}
+                    >
+                      {booking.status}
+                    </span>
                   </td>
                   <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                    {booking.user_id === currentUserId && (
-                      <button type="button" style={cancelButtonStyle} onClick={() => cancelBooking(booking.id)}>
-                        Batal
-                      </button>
-                    )}
+                    {["admin", "pengetua", "penolong_kanan"].includes(profile.role) &&
+                      booking.status === "pending" && (
+                        <button
+                          type="button"
+                          onClick={() => approveBooking(booking.id)}
+                          style={{
+                            marginLeft: 10,
+                            padding: "6px 10px",
+                            borderRadius: 6,
+                            border: "none",
+                            background: "#22c55e",
+                            color: "#fff",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Luluskan
+                        </button>
+                      )}
+
+                    {["admin", "pengetua", "penolong_kanan"].includes(profile.role) &&
+                      booking.status !== "cancelled" && (
+                        <button
+                          type="button"
+                          onClick={() => cancelBooking(booking.id)}
+                          style={{
+                            marginLeft: 10,
+                            padding: "6px 10px",
+                            borderRadius: 6,
+                            border: "none",
+                            background: "#ef4444",
+                            color: "#fff",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Batalkan
+                        </button>
+                      )}
                   </td>
                 </tr>
               ))}
