@@ -93,6 +93,9 @@ export default function DashboardPage() {
       cancel_reason,
       rooms (
         room_name
+      ),
+      profiles (
+        full_name
       )
     `)
       .eq("school_id", schoolId)
@@ -1024,6 +1027,7 @@ export default function DashboardPage() {
                 <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Tarikh</th>
                 <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Masa</th>
                 <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Bilik</th>
+                <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Guru</th>
                 <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Tujuan</th>
                 <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Status</th>
                 <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ccc" }}>Tindakan</th>
@@ -1038,6 +1042,9 @@ export default function DashboardPage() {
                   </td>
                   <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
                     {booking.rooms?.room_name}
+                  </td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
+                    {booking.profiles?.full_name || "-"}
                   </td>
                   <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
                     {booking.purpose || "Tiada tujuan"}
