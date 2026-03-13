@@ -83,12 +83,14 @@ export default function DashboardPage() {
       .from("bookings")
       .select(`
       id,
+      room_id,
       user_id,
       booking_date,
       start_time,
       end_time,
       purpose,
       status,
+      cancel_reason,
       rooms (
         room_name
       )
@@ -191,6 +193,22 @@ export default function DashboardPage() {
     })
 
     await Promise.all([...approverNotifications, teacherNotification])
+  }
+
+  async function notifyBookingApproved(booking: any) {
+    await createNotification({
+      userId: booking.user_id,
+      title: "Tempahan diluluskan",
+      message: `Tempahan anda untuk ${booking.rooms?.room_name || "bilik"} pada ${booking.booking_date}, ${booking.start_time} - ${booking.end_time} telah diluluskan.`,
+    })
+  }
+
+  async function notifyBookingCancelled(booking: any, reason: string) {
+    await createNotification({
+      userId: booking.user_id,
+      title: "Tempahan dibatalkan",
+      message: `Tempahan anda untuk ${booking.rooms?.room_name || "bilik"} pada ${booking.booking_date}, ${booking.start_time} - ${booking.end_time} telah dibatalkan. Sebab: ${reason}`,
+    })
   }
 
   async function loadStats(currentSchoolId?: string) {
@@ -328,44 +346,107 @@ export default function DashboardPage() {
     window.location.href = "/login"
   }
 
-  async function approveBooking(bookingId: string) {
+  async function approveBooking(booking: any) {
     const confirmApprove = confirm("Luluskan tempahan ini?")
 
     if (!confirmApprove) return
+
+    const { data: authData } = await supabase.auth.getUser()
+    const currentUser = authData?.user
+
+    const { data: clashBookings, error: clashError } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("room_id", booking.room_id)
+      .eq("booking_date", booking.booking_date)
+      .eq("status", "approved")
+      .neq("id", booking.id)
+      .lt("start_time", booking.end_time)
+      .gt("end_time", booking.start_time)
+
+    if (clashError) {
+      alert("Gagal semak pertindihan tempahan.")
+      console.error(clashError)
+      return
+    }
+
+    if (clashBookings && clashBookings.length > 0) {
+      alert("Tempahan ini tidak boleh diluluskan kerana bertindih dengan tempahan yang sudah diluluskan.")
+      return
+    }
 
     const { error } = await supabase
       .from("bookings")
       .update({
         status: "approved",
+        approved_by: currentUser?.id || null,
+        approved_at: new Date().toISOString(),
       })
-      .eq("id", bookingId)
+      .eq("id", booking.id)
 
     if (error) {
       alert("Gagal meluluskan tempahan")
+      console.error(error)
       return
     }
 
+    await notifyBookingApproved(booking)
+
+    const { data: overlappingPending, error: pendingError } = await supabase
+      .from("bookings")
+      .select("id, user_id, booking_date, start_time, end_time, rooms(room_name)")
+      .eq("room_id", booking.room_id)
+      .eq("booking_date", booking.booking_date)
+      .eq("status", "pending")
+      .neq("id", booking.id)
+      .lt("start_time", booking.end_time)
+      .gt("end_time", booking.start_time)
+
+    if (!pendingError && overlappingPending && overlappingPending.length > 0) {
+      const ids = overlappingPending.map((b: any) => b.id)
+
+      await supabase
+        .from("bookings")
+        .update({
+          status: "cancelled",
+          cancelled_by: currentUser?.id || null,
+          cancelled_at: new Date().toISOString(),
+          cancel_reason: "Dibatalkan automatik kerana slot telah diluluskan untuk tempahan lain.",
+        })
+        .in("id", ids)
+    }
+
     await loadBookings(profile?.school_id)
+    await loadNotifications()
   }
 
-  async function cancelBooking(bookingId: string) {
+  async function cancelBooking(booking: any) {
     const reason = prompt("Nyatakan sebab pembatalan")
 
     if (!reason) return
+
+    const { data: authData } = await supabase.auth.getUser()
+    const currentUser = authData?.user
 
     const { error } = await supabase
       .from("bookings")
       .update({
         status: "cancelled",
+        cancelled_by: currentUser?.id || null,
+        cancelled_at: new Date().toISOString(),
+        cancel_reason: reason,
       })
-      .eq("id", bookingId)
+      .eq("id", booking.id)
 
     if (error) {
       alert("Gagal batalkan tempahan")
+      console.error(error)
       return
     }
 
+    await notifyBookingCancelled(booking, reason)
     await loadBookings(profile?.school_id)
+    await loadNotifications()
   }
 
   async function handleBooking(e: React.FormEvent) {
@@ -383,6 +464,26 @@ export default function DashboardPage() {
 
     if (!currentUserId) {
       alert("ID pengguna tidak dijumpai.")
+      return
+    }
+
+    const { data: clashes, error: clashError } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("room_id", roomId)
+      .eq("booking_date", bookingDate)
+      .eq("status", "approved")
+      .lt("start_time", endTime)
+      .gt("end_time", startTime)
+
+    if (clashError) {
+      alert("Gagal semak pertindihan tempahan.")
+      console.error(clashError)
+      return
+    }
+
+    if (clashes && clashes.length > 0) {
+      alert("Slot ini sudah bertindih dengan tempahan yang telah diluluskan.")
       return
     }
 
@@ -940,6 +1041,11 @@ export default function DashboardPage() {
                   </td>
                   <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
                     {booking.purpose || "Tiada tujuan"}
+                    {booking.status === "cancelled" && booking.cancel_reason && (
+                      <div style={{ color: "#b91c1c", marginTop: 4 }}>
+                        Sebab batal: {booking.cancel_reason}
+                      </div>
+                    )}
                   </td>
                   <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
                     <span
@@ -962,7 +1068,7 @@ export default function DashboardPage() {
                       booking.status === "pending" && (
                         <button
                           type="button"
-                          onClick={() => approveBooking(booking.id)}
+                          onClick={() => approveBooking(booking)}
                           style={{
                             marginLeft: 10,
                             padding: "6px 10px",
@@ -981,7 +1087,7 @@ export default function DashboardPage() {
                       booking.status !== "cancelled" && (
                         <button
                           type="button"
-                          onClick={() => cancelBooking(booking.id)}
+                          onClick={() => cancelBooking(booking)}
                           style={{
                             marginLeft: 10,
                             padding: "6px 10px",
