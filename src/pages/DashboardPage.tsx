@@ -82,24 +82,25 @@ export default function DashboardPage() {
     const { data, error } = await supabase
       .from("bookings")
       .select(`
-      id,
-      room_id,
-      user_id,
-      booking_date,
-      start_time,
-      end_time,
-      purpose,
-      status,
-      cancel_reason,
-      rooms (
-        room_name
-      ),
-      profiles (
-        full_name
-      )
-    `)
+    id,
+    room_id,
+    user_id,
+    booking_date,
+    start_time,
+    end_time,
+    purpose,
+    status,
+    cancel_reason,
+    approved_by,
+    cancelled_by,
+    rooms!bookings_room_id_fkey (
+      room_name
+    ),
+    profiles!bookings_user_id_fkey (
+      full_name
+    )
+  `)
       .eq("school_id", schoolId)
-      .gte("booking_date", new Date().toISOString().split("T")[0])
       .order("booking_date", { ascending: true })
       .order("start_time", { ascending: true })
 
@@ -1041,7 +1042,7 @@ export default function DashboardPage() {
                     {booking.start_time} - {booking.end_time}
                   </td>
                   <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                    {booking.rooms?.room_name}
+                    {booking.rooms?.room_name || "-"}
                   </td>
                   <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
                     {booking.profiles?.full_name || "-"}
