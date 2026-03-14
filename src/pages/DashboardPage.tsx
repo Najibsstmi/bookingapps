@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
+import AppHeader from "../components/AppHeader"
 import { supabase } from "../lib/supabase"
 import { seedDefaultRooms } from "../lib/roomService"
 
@@ -1101,6 +1102,12 @@ export default function DashboardPage() {
         fontFamily: "Arial, sans-serif",
       }}
     >
+      <AppHeader
+        schoolName={schoolName}
+        schoolLogoUrl={schoolLogoUrl}
+        role={profile?.role}
+      />
+
       <div style={cardStyle}>
         <div
           style={{

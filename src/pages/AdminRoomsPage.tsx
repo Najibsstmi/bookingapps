@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, Navigate } from "react-router-dom"
+import AppHeader from "../components/AppHeader"
 import { supabase } from "../lib/supabase"
 import { seedDefaultRooms } from "../lib/roomService"
 
@@ -29,6 +30,8 @@ export default function AdminRoomsPage() {
   const [newRoomCategory, setNewRoomCategory] = useState("")
   const [newRoomCapacity, setNewRoomCapacity] = useState("")
   const [message, setMessage] = useState("")
+  const [schoolName, setSchoolName] = useState("")
+  const [schoolLogoUrl, setSchoolLogoUrl] = useState("")
 
   useEffect(() => {
     async function init() {
@@ -55,6 +58,17 @@ export default function AdminRoomsPage() {
       setProfile(profileData as Profile)
 
       if (profileData.school_id) {
+        const { data: schoolData, error: schoolError } = await supabase
+          .from("schools")
+          .select("school_name, logo_url")
+          .eq("id", profileData.school_id)
+          .single()
+
+        if (!schoolError && schoolData) {
+          setSchoolName(schoolData.school_name || "")
+          setSchoolLogoUrl(schoolData.logo_url || "")
+        }
+
         if (profileData.role === "admin") {
           try {
             await seedDefaultRooms(profileData.school_id)
@@ -201,6 +215,12 @@ export default function AdminRoomsPage() {
 
   return (
     <div style={{ maxWidth: 1100, margin: "40px auto", padding: 24 }}>
+      <AppHeader
+        schoolName={schoolName}
+        schoolLogoUrl={schoolLogoUrl}
+        role={profile?.role}
+      />
+
       <Link
         to="/dashboard"
         style={{

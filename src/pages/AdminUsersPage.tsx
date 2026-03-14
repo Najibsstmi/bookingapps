@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
+import AppHeader from "../components/AppHeader"
 import { supabase } from "../lib/supabase"
 
 type Profile = {
@@ -18,9 +19,12 @@ type MyProfile = {
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<Profile[]>([])
+  const [profile, setProfile] = useState<MyProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState("")
   const [savingUserId, setSavingUserId] = useState<string | null>(null)
+  const [schoolName, setSchoolName] = useState("")
+  const [schoolLogoUrl, setSchoolLogoUrl] = useState("")
   const handleLogout = async () => {
   await supabase.auth.signOut()
   window.location.href = "/login"
@@ -50,6 +54,21 @@ export default function AdminUsersPage() {
       setMessage("Profil admin tidak dijumpai.")
       setLoading(false)
       return
+    }
+
+    setProfile(myProfile)
+
+    if (myProfile.school_id) {
+      const { data: schoolData, error: schoolError } = await supabase
+        .from("schools")
+        .select("school_name, logo_url")
+        .eq("id", myProfile.school_id)
+        .single()
+
+      if (!schoolError && schoolData) {
+        setSchoolName(schoolData.school_name || "")
+        setSchoolLogoUrl(schoolData.logo_url || "")
+      }
     }
 
     const allowedRoles = ["admin", "pengetua"]
@@ -143,6 +162,12 @@ export default function AdminUsersPage() {
 
   return (
     <div style={{ maxWidth: 1000, margin: "40px auto", padding: 24 }}>
+      <AppHeader
+        schoolName={schoolName}
+        schoolLogoUrl={schoolLogoUrl}
+        role={profile?.role}
+      />
+
       <Link
         to="/dashboard"
         style={{

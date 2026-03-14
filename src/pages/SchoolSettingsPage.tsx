@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, Navigate } from "react-router-dom"
+import AppHeader from "../components/AppHeader"
 import { supabase } from "../lib/supabase"
 
 type Profile = {
@@ -26,6 +27,8 @@ export default function SchoolSettingsPage() {
   const [message, setMessage] = useState("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [schoolName, setSchoolName] = useState("")
+  const [schoolLogoUrl, setSchoolLogoUrl] = useState("")
 
   useEffect(() => {
     async function init() {
@@ -50,6 +53,7 @@ export default function SchoolSettingsPage() {
       }
 
       setProfile(profileData as Profile)
+      console.log("PROFILE DATA:", profileData)
 
       if (profileData.school_id) {
         const { data: schoolData, error: schoolError } = await supabase
@@ -60,6 +64,8 @@ export default function SchoolSettingsPage() {
 
         if (!schoolError && schoolData) {
           setSchool(schoolData as School)
+          setSchoolName(schoolData.school_name || "")
+          setSchoolLogoUrl(schoolData.logo_url || "")
         }
       }
 
@@ -126,17 +132,26 @@ export default function SchoolSettingsPage() {
 
       const publicUrl = data.publicUrl
 
-      const { error: updateError } = await supabase
+      const { data: updatedSchool, error: updateError } = await supabase
         .from("schools")
         .update({ logo_url: publicUrl })
         .eq("id", profile.school_id)
+        .select("id, school_name, school_code, logo_url")
+        .single()
+
+      console.log("profile.school_id:", profile.school_id)
+      console.log("publicUrl:", publicUrl)
+      console.log("updatedSchool:", updatedSchool)
+      console.log("updateError:", updateError)
 
       if (updateError) {
         alert("Gagal simpan URL logo: " + updateError.message)
         return
       }
 
-      setSchool((prev) => (prev ? { ...prev, logo_url: publicUrl } : prev))
+      setSchool(updatedSchool as School)
+      setSchoolName(updatedSchool.school_name || "")
+      setSchoolLogoUrl(updatedSchool.logo_url || "")
       setSelectedFile(null)
       setPreviewUrl(null)
       setMessage("Logo sekolah berjaya disimpan.")
@@ -202,6 +217,12 @@ export default function SchoolSettingsPage() {
 
   return (
     <div style={{ maxWidth: 1000, margin: "40px auto", padding: 24 }}>
+      <AppHeader
+        schoolName={school?.school_name || schoolName}
+        schoolLogoUrl={school?.logo_url || schoolLogoUrl}
+        role={profile?.role}
+      />
+
       <Link
         to="/dashboard"
         style={{
