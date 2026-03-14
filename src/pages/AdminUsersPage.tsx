@@ -19,6 +19,7 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState("")
+  const [savingUserId, setSavingUserId] = useState<string | null>(null)
   const handleLogout = async () => {
   await supabase.auth.signOut()
   window.location.href = "/login"
@@ -110,16 +111,28 @@ export default function AdminUsersPage() {
   }
 
   const updateRole = async (userId: string, newRole: string) => {
-    const { error } = await supabase
-      .from("profiles")
-      .update({ role: newRole })
-      .eq("id", userId)
+    try {
+      setSavingUserId(userId)
 
-    if (error) {
-      alert("Gagal update role")
-    } else {
-      alert("Role berjaya dikemaskini")
-      loadUsers()
+      const { error } = await supabase
+        .from("profiles")
+        .update({ role: newRole })
+        .eq("id", userId)
+
+      if (error) {
+        alert("Gagal mengemaskini role.")
+        return
+      }
+
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId ? { ...user, role: newRole } : user
+        )
+      )
+
+      alert("Role berjaya dikemaskini.")
+    } finally {
+      setSavingUserId(null)
     }
   }
 
@@ -174,6 +187,7 @@ export default function AdminUsersPage() {
                   <select
                     value={item.role}
                     onChange={(e) => updateRole(item.id, e.target.value)}
+                    disabled={savingUserId === item.id}
                     style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #ccc" }}
                   >
                     <option value="guru">Guru</option>

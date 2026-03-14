@@ -35,6 +35,18 @@ export default function DashboardPage() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [pendingUsers, setPendingUsers] = useState<any[]>([])
   const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({})
+  const [schoolUsers, setSchoolUsers] = useState<
+    {
+      id: string
+      full_name: string | null
+      email: string
+      role: "guru" | "admin" | "pengetua" | "penolong_kanan"
+      approval_status: string | null
+      school_id: string | null
+    }[]
+  >([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  const [savingUserId, setSavingUserId] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState("")
   const [roomId, setRoomId] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")
@@ -189,6 +201,27 @@ export default function DashboardPage() {
       roleDefaults[user.id] = user.role || "guru"
     })
     setSelectedRoles(roleDefaults)
+  }
+
+  const fetchSchoolUsers = async () => {
+    if (!profile?.school_id) return
+
+    setLoadingUsers(true)
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, role, approval_status, school_id")
+      .eq("school_id", profile.school_id)
+      .order("full_name", { ascending: true })
+
+    if (error) {
+      console.error("Gagal ambil senarai pengguna:", error.message)
+      setSchoolUsers([])
+    } else {
+      setSchoolUsers((data ?? []) as typeof schoolUsers)
+    }
+
+    setLoadingUsers(false)
   }
 
   const loadNotifications = async (userId: string) => {
@@ -392,6 +425,15 @@ export default function DashboardPage() {
     initSchoolData()
   }, [profile?.id, profile?.school_id, profile?.role])
 
+  useEffect(() => {
+    if (
+      profile?.school_id &&
+      (profile.role === "admin" || profile.role === "pengetua")
+    ) {
+      fetchSchoolUsers()
+    }
+  }, [profile?.school_id, profile?.role])
+
   const categories = [...new Set(
     rooms
       .map((room) => room.room_category)
@@ -491,6 +533,39 @@ export default function DashboardPage() {
 
     if (schoolId) {
       await loadPendingUsers(schoolId)
+      await fetchSchoolUsers()
+    }
+  }
+
+  const updateUserRole = async (
+    userId: string,
+    newRole: "guru" | "admin" | "pengetua" | "penolong_kanan"
+  ) => {
+    try {
+      setSavingUserId(userId)
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ role: newRole })
+        .eq("id", userId)
+
+      if (error) {
+        alert("Gagal mengemaskini peranan pengguna.")
+        return
+      }
+
+      setSchoolUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId ? { ...user, role: newRole } : user
+        )
+      )
+
+      alert("Peranan pengguna berjaya dikemaskini.")
+    } catch (err) {
+      console.error(err)
+      alert("Berlaku ralat semasa mengemaskini peranan.")
+    } finally {
+      setSavingUserId(null)
     }
   }
 
@@ -834,6 +909,19 @@ export default function DashboardPage() {
     color: "#fff",
     fontWeight: 700,
     cursor: "pointer",
+  }
+
+  const thStyle: React.CSSProperties = {
+    textAlign: "left",
+    padding: "12px",
+    borderBottom: "1px solid #e2e8f0",
+    fontSize: 14,
+  }
+
+  const tdStyle: React.CSSProperties = {
+    padding: "12px",
+    borderBottom: "1px solid #f1f5f9",
+    fontSize: 14,
   }
 
   function isSlotBooked(slotStart: string) {
@@ -1296,6 +1384,77 @@ export default function DashboardPage() {
           )}
         </div>
       ) : null}
+
+      {(profile?.role === "admin" || profile?.role === "pengetua") && (
+        <section
+          style={{
+            background: "#fff",
+            borderRadius: 16,
+            padding: 24,
+            marginTop: 24,
+            boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>Pengurusan Pengguna</h2>
+
+          {loadingUsers ? (
+            <p>Sedang memuatkan senarai pengguna...</p>
+          ) : schoolUsers.length === 0 ? (
+            <p>Tiada pengguna dijumpai.</p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Nama</th>
+                    <th style={thStyle}>Email</th>
+                    <th style={thStyle}>Peranan Semasa</th>
+                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Tukar Peranan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {schoolUsers.map((user) => (
+                    <tr key={user.id}>
+                      <td style={tdStyle}>{user.full_name || "-"}</td>
+                      <td style={tdStyle}>{user.email}</td>
+                      <td style={tdStyle}>{user.role}</td>
+                      <td style={tdStyle}>{user.approval_status || "-"}</td>
+                      <td style={tdStyle}>
+                        <select
+                          value={user.role}
+                          onChange={(e) =>
+                            updateUserRole(
+                              user.id,
+                              e.target.value as
+                                | "guru"
+                                | "admin"
+                                | "pengetua"
+                                | "penolong_kanan"
+                            )
+                          }
+                          disabled={savingUserId === user.id}
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            border: "1px solid #cbd5e1",
+                            minWidth: 180,
+                          }}
+                        >
+                          <option value="guru">Guru</option>
+                          <option value="admin">Admin</option>
+                          <option value="pengetua">Pengetua</option>
+                          <option value="penolong_kanan">Penolong Kanan</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       {isAdmin ? (
         <div style={cardStyle}>
