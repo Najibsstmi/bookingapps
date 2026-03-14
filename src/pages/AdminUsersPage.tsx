@@ -52,7 +52,7 @@ export default function AdminUsersPage() {
       return
     }
 
-    const allowedRoles = ["admin", "pengetua", "penolong_kanan"]
+    const allowedRoles = ["admin", "pengetua"]
 
     if (
       myProfile.approval_status !== "approved" ||
