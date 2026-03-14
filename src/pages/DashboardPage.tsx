@@ -95,6 +95,7 @@ export default function DashboardPage() {
     status,
     cancel_reason,
     cancelled_by,
+    cancelled_by_name,
     cancelled_at,
     rooms!bookings_room_id_fkey (
       room_name
@@ -139,7 +140,7 @@ export default function DashboardPage() {
       ...booking,
       teacher_name: profileMap.get(booking.user_id) || booking.user_id,
       cancelled_by_name: booking.cancelled_by
-        ? profileMap.get(booking.cancelled_by) || booking.cancelled_by
+        ? booking.cancelled_by_name || profileMap.get(booking.cancelled_by) || null
         : null,
     }))
 
@@ -530,6 +531,7 @@ export default function DashboardPage() {
       .update({
         status: "cancelled",
         cancelled_by: currentUser?.id || null,
+        cancelled_by_name: profile?.full_name || "Pentadbir",
         cancelled_at: new Date().toISOString(),
         cancel_reason: trimmedReason,
       })
@@ -1205,7 +1207,11 @@ export default function DashboardPage() {
                           <div>
                             <strong>Dibatalkan oleh:</strong> {booking.cancelled_by_name}
                           </div>
-                        ) : null}
+                        ) : (
+                          <div>
+                            <strong>Dibatalkan oleh:</strong> Pentadbir
+                          </div>
+                        )}
 
                         {booking.cancelled_at ? (
                           <div>
