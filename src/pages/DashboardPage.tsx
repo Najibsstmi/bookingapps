@@ -711,6 +711,10 @@ export default function DashboardPage() {
 
   const isPending = profile?.approval_status === "pending"
 
+  const pendingBookings = bookings.filter((booking: any) => booking.status === "pending")
+  const approvedBookings = bookings.filter((booking: any) => booking.status === "approved")
+  const cancelledBookings = bookings.filter((booking: any) => booking.status === "cancelled")
+
   const fieldStyle = {
     width: "100%",
     maxWidth: 420,
@@ -755,6 +759,194 @@ export default function DashboardPage() {
       booked: false,
       end: slotEnd,
     }
+  }
+
+  const renderBookingCard = (booking: any) => {
+    const statusLabel =
+      booking.status === "approved"
+        ? "Diluluskan"
+        : booking.status === "cancelled"
+        ? "Dibatalkan"
+        : "Menunggu Kelulusan"
+
+    const statusColor =
+      booking.status === "approved"
+        ? "#15803d"
+        : booking.status === "cancelled"
+        ? "#b91c1c"
+        : "#b45309"
+
+    const badgeBg =
+      booking.status === "approved"
+        ? "#dcfce7"
+        : booking.status === "cancelled"
+        ? "#fee2e2"
+        : "#fef3c7"
+
+    return (
+      <div
+        key={booking.id}
+        style={{
+          border: booking.status === "cancelled" ? "1px solid #fecaca" : "1px solid #e2e8f0",
+          borderRadius: 14,
+          padding: 16,
+          background: booking.status === "cancelled" ? "#fef2f2" : "#ffffff",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 12,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: "#0f172a",
+                marginBottom: 4,
+              }}
+            >
+              {booking.rooms?.room_name || "Bilik tidak diketahui"}
+            </div>
+            <div style={{ fontSize: 13, color: "#64748b" }}>
+              Guru: {booking.teacher_name || "Pengguna"}
+            </div>
+          </div>
+
+          <span
+            style={{
+              background: badgeBg,
+              color: statusColor,
+              fontWeight: 700,
+              fontSize: 12,
+              padding: "6px 10px",
+              borderRadius: 999,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {statusLabel}
+          </span>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: 10,
+            marginBottom: 12,
+          }}
+        >
+          <div
+            style={{
+              background: "#f8fafc",
+              borderRadius: 10,
+              padding: 10,
+            }}
+          >
+            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
+              Tarikh
+            </div>
+            <div style={{ fontWeight: 600, color: "#0f172a" }}>
+              {booking.booking_date}
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: "#f8fafc",
+              borderRadius: 10,
+              padding: 10,
+            }}
+          >
+            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
+              Masa
+            </div>
+            <div style={{ fontWeight: 600, color: "#0f172a" }}>
+              {String(booking.start_time).slice(0, 5)} -{" "}
+              {String(booking.end_time).slice(0, 5)}
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: "#f8fafc",
+              borderRadius: 10,
+              padding: 10,
+            }}
+          >
+            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
+              Tujuan
+            </div>
+            <div style={{ fontWeight: 600, color: "#0f172a" }}>
+              {booking.purpose || "-"}
+            </div>
+          </div>
+        </div>
+
+        {booking.status === "cancelled" ? (
+          <div
+            style={{
+              marginTop: 12,
+              padding: 12,
+              borderRadius: 10,
+              background: "#fff7ed",
+              color: "#9a3412",
+              fontSize: 14,
+              display: "grid",
+              gap: 6,
+            }}
+          >
+            <div>
+              <strong>Sebab batal:</strong> {booking.cancel_reason || "Tiada sebab dinyatakan"}
+            </div>
+
+            <div>
+              <strong>Dibatalkan oleh:</strong> {booking.cancelled_by_name || "Pihak Pengurusan Sekolah"}
+            </div>
+
+            {booking.cancelled_at ? (
+              <div>
+                <strong>Tarikh/Tindakan:</strong>{" "}
+                {new Date(booking.cancelled_at).toLocaleString("ms-MY")}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {isAdmin && booking.status === "pending" ? (
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
+            <button
+              onClick={() => approveBooking(booking)}
+              type="button"
+              style={{
+                ...primaryButtonStyle,
+                background: "#15803d",
+              }}
+            >
+              Luluskan
+            </button>
+
+            <button
+              onClick={() => cancelBooking(booking)}
+              type="button"
+              style={{
+                ...primaryButtonStyle,
+                background: "#b91c1c",
+              }}
+            >
+              Batalkan
+            </button>
+          </div>
+        ) : null}
+      </div>
+    )
   }
 
   function handleSlotClick(start: string, end: string, booked: boolean) {
@@ -880,6 +1072,55 @@ export default function DashboardPage() {
       </div>
 
       {isAdmin ? (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 16,
+            marginBottom: 24,
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              padding: 20,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+            }}
+          >
+            <p style={{ margin: 0, color: "#666" }}>Jumlah Bilik Aktif</p>
+            <h2 style={{ margin: "8px 0 0 0" }}>{stats.totalRooms}</h2>
+          </div>
+
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              padding: 20,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+            }}
+          >
+            <p style={{ margin: 0, color: "#666" }}>Tempahan Akan Datang</p>
+            <h2 style={{ margin: "8px 0 0 0" }}>{stats.upcomingBookings}</h2>
+          </div>
+
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              padding: 20,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+            }}
+          >
+            <p style={{ margin: 0, color: "#666" }}>Bilik Paling Digunakan</p>
+            <h2 style={{ margin: "8px 0 0 0", fontSize: 20 }}>
+              {stats.topRoom}
+            </h2>
+          </div>
+        </div>
+      ) : null}
+
+      {isAdmin ? (
         <div style={cardStyle}>
           <h2 style={{ marginTop: 0 }}>Pengguna Menunggu Kelulusan</h2>
 
@@ -928,55 +1169,6 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
-        </div>
-      ) : null}
-
-      {isAdmin ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: 16,
-              padding: 20,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-            }}
-          >
-            <p style={{ margin: 0, color: "#666" }}>Jumlah Bilik Aktif</p>
-            <h2 style={{ margin: "8px 0 0 0" }}>{stats.totalRooms}</h2>
-          </div>
-
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: 16,
-              padding: 20,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-            }}
-          >
-            <p style={{ margin: 0, color: "#666" }}>Tempahan Akan Datang</p>
-            <h2 style={{ margin: "8px 0 0 0" }}>{stats.upcomingBookings}</h2>
-          </div>
-
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: 16,
-              padding: 20,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-            }}
-          >
-            <p style={{ margin: 0, color: "#666" }}>Bilik Paling Digunakan</p>
-            <h2 style={{ margin: "8px 0 0 0", fontSize: 20 }}>
-              {stats.topRoom}
-            </h2>
-          </div>
         </div>
       ) : null}
 
@@ -1055,201 +1247,50 @@ export default function DashboardPage() {
 
           {bookings.length === 0 ? (
             <p style={{ color: "#64748b" }}>Belum ada tempahan.</p>
+          ) : isAdmin ? (
+            <div style={{ display: "grid", gap: 24 }}>
+              <div>
+                <h3 style={{ marginBottom: 12, color: "#b45309" }}>
+                  Menunggu Kelulusan ({pendingBookings.length})
+                </h3>
+                {pendingBookings.length === 0 ? (
+                  <p style={{ color: "#64748b" }}>Tiada tempahan menunggu kelulusan.</p>
+                ) : (
+                  <div style={{ display: "grid", gap: 14 }}>
+                    {pendingBookings.map(renderBookingCard)}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 style={{ marginBottom: 12, color: "#15803d" }}>
+                  Diluluskan ({approvedBookings.length})
+                </h3>
+                {approvedBookings.length === 0 ? (
+                  <p style={{ color: "#64748b" }}>Tiada tempahan diluluskan.</p>
+                ) : (
+                  <div style={{ display: "grid", gap: 14 }}>
+                    {approvedBookings.map(renderBookingCard)}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 style={{ marginBottom: 12, color: "#b91c1c" }}>
+                  Dibatalkan ({cancelledBookings.length})
+                </h3>
+                {cancelledBookings.length === 0 ? (
+                  <p style={{ color: "#64748b" }}>Tiada tempahan dibatalkan.</p>
+                ) : (
+                  <div style={{ display: "grid", gap: 14 }}>
+                    {cancelledBookings.map(renderBookingCard)}
+                  </div>
+                )}
+              </div>
+            </div>
           ) : (
             <div style={{ display: "grid", gap: 14 }}>
-              {bookings.map((booking: any) => {
-                const statusLabel =
-                  booking.status === "approved"
-                    ? "Diluluskan"
-                    : booking.status === "cancelled"
-                    ? "Dibatalkan"
-                    : "Menunggu Kelulusan"
-
-                const statusColor =
-                  booking.status === "approved"
-                    ? "#15803d"
-                    : booking.status === "cancelled"
-                    ? "#b91c1c"
-                    : "#b45309"
-
-                const badgeBg =
-                  booking.status === "approved"
-                    ? "#dcfce7"
-                    : booking.status === "cancelled"
-                    ? "#fee2e2"
-                    : "#fef3c7"
-
-                return (
-                  <div
-                    key={booking.id}
-                    style={{
-                      border: booking.status === "cancelled" ? "1px solid #fecaca" : "1px solid #e2e8f0",
-                      borderRadius: 14,
-                      padding: 16,
-                      background: booking.status === "cancelled" ? "#fef2f2" : "#ffffff",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        gap: 12,
-                        flexWrap: "wrap",
-                        marginBottom: 12,
-                      }}
-                    >
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 16,
-                            fontWeight: 700,
-                            color: "#0f172a",
-                            marginBottom: 4,
-                          }}
-                        >
-                          {booking.rooms?.room_name || "Bilik tidak diketahui"}
-                        </div>
-                        <div style={{ fontSize: 13, color: "#64748b" }}>
-                          Guru: {booking.teacher_name || "Pengguna"}
-                        </div>
-                      </div>
-
-                      <span
-                        style={{
-                          background: badgeBg,
-                          color: statusColor,
-                          fontWeight: 700,
-                          fontSize: 12,
-                          padding: "6px 10px",
-                          borderRadius: 999,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {statusLabel}
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                        gap: 10,
-                        marginBottom: 12,
-                      }}
-                    >
-                      <div
-                        style={{
-                          background: "#f8fafc",
-                          borderRadius: 10,
-                          padding: 10,
-                        }}
-                      >
-                        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
-                          Tarikh
-                        </div>
-                        <div style={{ fontWeight: 600, color: "#0f172a" }}>
-                          {booking.booking_date}
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          background: "#f8fafc",
-                          borderRadius: 10,
-                          padding: 10,
-                        }}
-                      >
-                        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
-                          Masa
-                        </div>
-                        <div style={{ fontWeight: 600, color: "#0f172a" }}>
-                          {String(booking.start_time).slice(0, 5)} -{" "}
-                          {String(booking.end_time).slice(0, 5)}
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          background: "#f8fafc",
-                          borderRadius: 10,
-                          padding: 10,
-                        }}
-                      >
-                        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
-                          Tujuan
-                        </div>
-                        <div style={{ fontWeight: 600, color: "#0f172a" }}>
-                          {booking.purpose || "-"}
-                        </div>
-                      </div>
-                    </div>
-
-                    {booking.status === "cancelled" ? (
-                      <div
-                        style={{
-                          marginTop: 12,
-                          padding: 12,
-                          borderRadius: 10,
-                          background: "#fff7ed",
-                          color: "#9a3412",
-                          fontSize: 14,
-                          display: "grid",
-                          gap: 6,
-                        }}
-                      >
-                        <div>
-                          <strong>Sebab batal:</strong> {booking.cancel_reason || "Tiada sebab dinyatakan"}
-                        </div>
-
-                        {booking.cancelled_by_name ? (
-                          <div>
-                            <strong>Dibatalkan oleh:</strong> {booking.cancelled_by_name}
-                          </div>
-                        ) : (
-                          <div>
-                            <strong>Dibatalkan oleh:</strong> Pentadbir
-                          </div>
-                        )}
-
-                        {booking.cancelled_at ? (
-                          <div>
-                            <strong>Tarikh/Tindakan:</strong>{" "}
-                            {new Date(booking.cancelled_at).toLocaleString("ms-MY")}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {isAdmin && booking.status === "pending" ? (
-                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                        <button
-                          onClick={() => approveBooking(booking)}
-                          type="button"
-                          style={{
-                            ...primaryButtonStyle,
-                            background: "#15803d",
-                          }}
-                        >
-                          Luluskan
-                        </button>
-
-                        <button
-                          onClick={() => cancelBooking(booking)}
-                          type="button"
-                          style={{
-                            ...primaryButtonStyle,
-                            background: "#b91c1c",
-                          }}
-                        >
-                          Batalkan
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                )
-              })}
+              {bookings.map(renderBookingCard)}
             </div>
           )}
         </div>
