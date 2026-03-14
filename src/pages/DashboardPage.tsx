@@ -42,6 +42,7 @@ export default function DashboardPage() {
   const [startTime, setStartTime] = useState("")
   const [endTime, setEndTime] = useState("")
   const [purpose, setPurpose] = useState("")
+  const [submittingBooking, setSubmittingBooking] = useState(false)
   const [newRoomName, setNewRoomName] = useState("")
   const [newRoomCategory, setNewRoomCategory] = useState("")
   const [newRoomCapacity, setNewRoomCapacity] = useState("")
@@ -147,20 +148,20 @@ export default function DashboardPage() {
     setBookings(mergedBookings)
   }
 
-  async function loadRooms(schoolId?: string) {
-    if (!schoolId) {
+  async function loadRooms(schoolIdValue?: string) {
+    if (!schoolIdValue) {
       return
     }
 
     const { data, error } = await supabase
       .from("rooms")
-      .select("*")
-      .eq("school_id", schoolId)
+      .select("id, school_id, room_name, room_category, capacity, is_active")
+      .eq("school_id", schoolIdValue)
       .eq("is_active", true)
       .order("room_name", { ascending: true })
 
     if (error) {
-      console.error("Rooms error:", error)
+      console.error("Ralat load rooms:", error)
       return
     }
 
@@ -552,65 +553,95 @@ export default function DashboardPage() {
     await loadNotifications()
   }
 
-  async function handleBooking(e: React.FormEvent) {
+  async function handleBooking(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
 
+    const currentUser = currentUserId ? { id: currentUserId } : null
+    const schoolId = profile?.school_id
+    const selectedRoomId = roomId
+    const trimmedPurpose = purpose.trim()
+
+    if (!currentUser || !profile || !schoolId) {
+      alert("Maklumat pengguna tidak lengkap.")
+      return
+    }
+
+    if (!selectedRoomId) {
+      alert("Sila pilih bilik terlebih dahulu.")
+      return
+    }
+
+    if (!bookingDate) {
+      alert("Sila pilih tarikh tempahan.")
+      return
+    }
+
+    if (bookingDate < today) {
+      alert("Tarikh tempahan tidak boleh sebelum hari ini.")
+      return
+    }
+
+    if (!startTime || !endTime) {
+      alert("Sila pilih masa mula dan masa tamat.")
+      return
+    }
+
     if (startTime >= endTime) {
-      alert("Masa tamat mesti selepas masa mula.")
+      alert("Masa tamat mestilah lebih lewat daripada masa mula.")
       return
     }
 
-    if (!profile?.school_id) {
-      alert("School ID tidak dijumpai.")
+    if (!trimmedPurpose) {
+      alert("Sila isi tujuan penggunaan bilik.")
       return
     }
 
-    if (!currentUserId) {
-      alert("ID pengguna tidak dijumpai.")
-      return
-    }
+    setSubmittingBooking(true)
 
-    const { data: clashes, error: clashError } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("room_id", roomId)
-      .eq("booking_date", bookingDate)
-      .eq("status", "approved")
-      .lt("start_time", endTime)
-      .gt("end_time", startTime)
+    try {
+      const { data: clashes, error: clashError } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("room_id", selectedRoomId)
+        .eq("booking_date", bookingDate)
+        .eq("status", "approved")
+        .lt("start_time", endTime)
+        .gt("end_time", startTime)
 
-    if (clashError) {
-      alert("Gagal semak pertindihan tempahan.")
-      console.error(clashError)
-      return
-    }
+      if (clashError) {
+        alert("Gagal semak pertindihan tempahan.")
+        console.error(clashError)
+        return
+      }
 
-    if (clashes && clashes.length > 0) {
-      alert("Slot ini sudah bertindih dengan tempahan yang telah diluluskan.")
-      return
-    }
+      if (clashes && clashes.length > 0) {
+        alert("Slot ini sudah bertindih dengan tempahan yang telah diluluskan.")
+        return
+      }
 
-    const { error } = await supabase
-      .from("bookings")
-      .insert({
-        school_id: profile.school_id,
-        room_id: roomId,
-        user_id: currentUserId,
-        booking_date: bookingDate,
-        start_time: startTime,
-        end_time: endTime,
-        purpose: purpose,
-        status: "pending",
-      })
+      const { error } = await supabase
+        .from("bookings")
+        .insert({
+          school_id: schoolId,
+          room_id: selectedRoomId,
+          user_id: currentUser.id,
+          booking_date: bookingDate,
+          start_time: startTime,
+          end_time: endTime,
+          purpose: trimmedPurpose,
+          status: "pending",
+        })
 
-    if (error) {
-      alert("Tempahan gagal: " + error.message)
-      console.error("Booking error:", error)
-    } else {
-      const selectedRoom = rooms.find((room: any) => room.id === roomId)
+      if (error) {
+        alert("Gagal menghantar tempahan: " + error.message)
+        console.error("BOOKING ERROR:", error)
+        return
+      }
+
+      const selectedRoom = rooms.find((room: any) => room.id === selectedRoomId)
 
       await notifyBookingCreated({
-        schoolId: profile.school_id,
+        schoolId,
         bookingDate,
         startTime,
         endTime,
@@ -619,9 +650,8 @@ export default function DashboardPage() {
         teacherId: profile.id,
       })
 
-      alert("Tempahan berjaya")
-      await loadBookings(profile.school_id, profile.id, profile.role)
-      await loadNotifications()
+      alert("Tempahan berjaya dihantar dan sedang menunggu kelulusan.")
+
       setSelectedSlots([])
       setSelectedCategory("")
       setRoomId("")
@@ -629,6 +659,11 @@ export default function DashboardPage() {
       setStartTime("")
       setEndTime("")
       setPurpose("")
+
+      await loadBookings(schoolId, currentUser.id, profile.role)
+      await loadNotifications()
+    } finally {
+      setSubmittingBooking(false)
     }
   }
 
@@ -710,6 +745,8 @@ export default function DashboardPage() {
   const isApproved = profile?.approval_status === "approved"
 
   const isPending = profile?.approval_status === "pending"
+
+  const today = new Date().toISOString().split("T")[0]
 
   const pendingBookings = bookings.filter((booking: any) => booking.status === "pending")
   const approvedBookings = bookings.filter((booking: any) => booking.status === "approved")
@@ -1336,6 +1373,7 @@ export default function DashboardPage() {
             type="date"
             value={bookingDate}
             onChange={(e) => setBookingDate(e.target.value)}
+            min={today}
             required
             style={fieldStyle}
           />
@@ -1438,11 +1476,12 @@ export default function DashboardPage() {
             placeholder="Tujuan penggunaan bilik"
             value={purpose}
             onChange={(e) => setPurpose(e.target.value)}
+            required
             style={fieldStyle}
           />
 
-          <button type="submit" style={primaryButtonStyle}>
-            Tempah Sekarang
+          <button type="submit" style={primaryButtonStyle} disabled={submittingBooking}>
+            {submittingBooking ? "Menghantar..." : "Tempah Sekarang"}
           </button>
           </form>
         </div>
