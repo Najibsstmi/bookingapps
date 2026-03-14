@@ -44,9 +44,7 @@ export default function DashboardPage() {
   const [endTime, setEndTime] = useState("")
   const [purpose, setPurpose] = useState("")
   const [submittingBooking, setSubmittingBooking] = useState(false)
-  const [newRoomName, setNewRoomName] = useState("")
-  const [newRoomCategory, setNewRoomCategory] = useState("")
-  const [newRoomCapacity, setNewRoomCapacity] = useState("")
+  const [showApproved, setShowApproved] = useState(false)
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -732,66 +730,6 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleAddRoom(e: React.FormEvent) {
-    e.preventDefault()
-
-    if (!profile?.school_id) {
-      alert("School ID tidak dijumpai.")
-      return
-    }
-
-    if (!newRoomName.trim()) {
-      alert("Nama bilik wajib diisi.")
-      return
-    }
-
-    const { error } = await supabase
-      .from("rooms")
-      .insert({
-        school_id: profile.school_id,
-        room_name: newRoomName.trim(),
-        room_category: newRoomCategory.trim() || null,
-        capacity: newRoomCapacity ? Number(newRoomCapacity) : null,
-        is_active: true,
-      })
-
-    if (error) {
-      alert("Gagal tambah bilik: " + error.message)
-      console.error(error)
-      return
-    }
-
-    alert("Bilik berjaya ditambah.")
-    setNewRoomName("")
-    setNewRoomCategory("")
-    setNewRoomCapacity("")
-    await loadRooms(profile.school_id)
-  }
-
-  async function toggleRoom(roomId: string, currentStatus: boolean) {
-    const confirmAction = confirm(
-      currentStatus
-        ? "Nyahaktifkan bilik ini?"
-        : "Aktifkan semula bilik ini?"
-    )
-
-    if (!confirmAction) return
-
-    const { error } = await supabase
-      .from("rooms")
-      .update({
-        is_active: !currentStatus,
-      })
-      .eq("id", roomId)
-
-    if (error) {
-      alert("Gagal kemaskini bilik")
-      return
-    }
-
-    await loadRooms(profile?.school_id)
-  }
-
   const cardStyle = {
     background: "#ffffff",
     borderRadius: 16,
@@ -1330,72 +1268,37 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {isAdmin ? (
-        <div style={cardStyle}>
-          <h2 style={{ marginTop: 0 }}>Tambah Bilik</h2>
+      {(profile?.role === "admin" || profile?.role === "pengetua") && (
+        <section
+          style={{
+            background: "#fff",
+            borderRadius: 16,
+            padding: 24,
+            marginTop: 24,
+            boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>Pengurusan Bilik</h2>
+          <p style={{ marginBottom: 16 }}>
+            Tambah bilik baru dan urus status aktif bilik sekolah.
+          </p>
 
-          <form onSubmit={handleAddRoom}>
-            <input
-              type="text"
-              placeholder="Nama bilik"
-              value={newRoomName}
-              onChange={(e) => setNewRoomName(e.target.value)}
-              style={fieldStyle}
-            />
-
-            <input
-              type="text"
-              placeholder="Kategori bilik"
-              value={newRoomCategory}
-              onChange={(e) => setNewRoomCategory(e.target.value)}
-              style={fieldStyle}
-            />
-
-            <input
-              type="number"
-              placeholder="Kapasiti"
-              value={newRoomCapacity}
-              onChange={(e) => setNewRoomCapacity(e.target.value)}
-              style={fieldStyle}
-            />
-
-            <button type="submit" style={primaryButtonStyle}>
-              Tambah Bilik
-            </button>
-          </form>
-        </div>
-      ) : null}
-
-      {isAdmin ? (
-        <div style={cardStyle}>
-          <h2 style={{ marginTop: 0 }}>Senarai Bilik</h2>
-          {rooms.length === 0 ? (
-            <p>Belum ada bilik.</p>
-          ) : (
-            <ul>
-              {rooms.map((room) => (
-                <li key={room.id}>
-                  {room.room_name}
-                  <button
-                    onClick={() => toggleRoom(room.id, Boolean(room.is_active))}
-                    style={{
-                      marginLeft: 10,
-                      padding: "6px 10px",
-                      borderRadius: 6,
-                      border: "none",
-                      background: room.is_active ? "#f59e0b" : "#10b981",
-                      color: "#fff",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {room.is_active ? "Nyahaktifkan" : "Aktifkan"}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ) : null}
+          <Link
+            to="/admin/rooms"
+            style={{
+              display: "inline-block",
+              background: "#16325B",
+              color: "#fff",
+              textDecoration: "none",
+              padding: "10px 16px",
+              borderRadius: 10,
+              fontWeight: 600,
+            }}
+          >
+            Buka Pengurusan Bilik
+          </Link>
+        </section>
+      )}
 
       {isApproved && (isAdmin || isGuru) ? (
         <div style={cardStyle}>
@@ -1421,16 +1324,21 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <h3 style={{ marginBottom: 12, color: "#15803d" }}>
-                  Diluluskan ({approvedBookings.length})
+                <h3
+                  style={{ marginBottom: 12, cursor: "pointer", color: "#15803d" }}
+                  onClick={() => setShowApproved(!showApproved)}
+                >
+                  Diluluskan ({approvedBookings.length}) {showApproved ? "▲" : "▼"}
                 </h3>
-                {approvedBookings.length === 0 ? (
-                  <p style={{ color: "#64748b" }}>Tiada tempahan diluluskan.</p>
-                ) : (
-                  <div style={{ display: "grid", gap: 14 }}>
-                    {approvedBookings.map(renderBookingCard)}
-                  </div>
-                )}
+                {showApproved ? (
+                  approvedBookings.length === 0 ? (
+                    <p style={{ color: "#64748b" }}>Tiada tempahan diluluskan.</p>
+                  ) : (
+                    <div style={{ display: "grid", gap: 14 }}>
+                      {approvedBookings.map(renderBookingCard)}
+                    </div>
+                  )
+                ) : null}
               </div>
 
               <div>

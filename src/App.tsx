@@ -3,8 +3,10 @@ import LoginPage from "./pages/LoginPage"
 import RegisterPage from "./pages/RegisterPage"
 import DashboardPage from "./pages/DashboardPage"
 import AdminUsersPage from "./pages/AdminUsersPage"
+import AdminRoomsPage from "./pages/AdminRoomsPage"
 import ForgotPasswordPage from "./pages/ForgotPasswordPage"
 import UpdatePasswordPage from "./pages/UpdatePasswordPage"
+import ProtectedRoute from "./components/ProtectedRoute"
 
 function App() {
   return (
@@ -13,8 +15,32 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route
+  path="/dashboard"
+  element={
+    <ProtectedRoute>
+      <DashboardPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/admin/users"
+  element={
+    <ProtectedRoute>
+      <AdminUsersPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/admin/rooms"
+  element={
+    <ProtectedRoute>
+      <AdminRoomsPage />
+    </ProtectedRoute>
+  }
+/>
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 <Route path="/update-password" element={<UpdatePasswordPage />} />
       </Routes>
