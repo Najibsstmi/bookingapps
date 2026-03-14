@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { supabase } from "../lib/supabase"
 import { seedDefaultRooms } from "../lib/roomService"
-import { createNotification } from "../lib/notificationService"
 
 type Room = {
   id: string
@@ -184,25 +183,85 @@ export default function DashboardPage() {
     setPendingUsers(data || [])
   }
 
-  async function loadNotifications() {
-    const { data: authData } = await supabase.auth.getUser()
-    const user = authData?.user
-
-    if (!user) return
-
+  const loadNotifications = async (userId: string) => {
     const { data, error } = await supabase
       .from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
+      .select("id, title, message, is_read, created_at")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(10)
 
     if (error) {
-      console.error("Notifications error:", error)
+      console.error("Ralat load notifications:", error)
       return
     }
 
     setNotifications(data || [])
+  }
+
+  const createNotification = async ({
+    userId,
+    schoolIdValue,
+    title,
+    message,
+  }: {
+    userId: string
+    schoolIdValue: string
+    title: string
+    message: string
+  }) => {
+    const { error } = await supabase.from("notifications").insert({
+      user_id: userId,
+      school_id: schoolIdValue,
+      title,
+      message,
+      is_read: false,
+    })
+
+    if (error) {
+      console.error("Ralat create notification:", error)
+    }
+  }
+
+  const notifySchoolAdmins = async ({
+    schoolIdValue,
+    title,
+    message,
+  }: {
+    schoolIdValue: string
+    title: string
+    message: string
+  }) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("school_id", schoolIdValue)
+      .in("role", ["admin", "pengetua", "penolong_kanan"])
+      .eq("approval_status", "approved")
+
+    if (error) {
+      console.error("Ralat cari admin sekolah:", error)
+      return
+    }
+
+    const adminRows = data || []
+
+    if (adminRows.length === 0) return
+
+    const notificationsToInsert = adminRows.map((admin: any) => ({
+      user_id: admin.id,
+      school_id: schoolIdValue,
+      title,
+      message,
+      is_read: false,
+    }))
+
+    const { error: insertError } = await supabase
+      .from("notifications")
+      .insert(notificationsToInsert)
+
+    if (insertError) {
+      console.error("Ralat notify admins:", insertError)
+    }
   }
 
   async function notifyBookingCreated({
@@ -222,48 +281,35 @@ export default function DashboardPage() {
     teacherName: string
     teacherId: string
   }) {
-    const { data: approvers, error } = await supabase
-      .from("profiles")
-      .select("id, role")
-      .eq("school_id", schoolId)
-      .in("role", ["admin", "pengetua", "penolong_kanan"])
-
-    if (error) {
-      console.error("Approver notification error:", error)
-      return
-    }
-
-    const approverNotifications =
-      approvers?.map((person: any) =>
-        createNotification({
-          userId: person.id,
-          title: "Tempahan baharu",
-          message: `${teacherName} membuat tempahan ${roomName} pada ${bookingDate}, ${startTime} - ${endTime}.`,
-        })
-      ) || []
-
-    const teacherNotification = createNotification({
+    await createNotification({
       userId: teacherId,
+      schoolIdValue: schoolId,
       title: "Tempahan berjaya dihantar",
       message: `Tempahan anda untuk ${roomName} pada ${bookingDate}, ${startTime} - ${endTime} sedang menunggu kelulusan.`,
     })
 
-    await Promise.all([...approverNotifications, teacherNotification])
+    await notifySchoolAdmins({
+      schoolIdValue: schoolId,
+      title: "Tempahan baru diterima",
+      message: `${teacherName || "Seorang guru"} telah membuat tempahan untuk ${roomName} pada ${bookingDate}, ${startTime} - ${endTime}.`,
+    })
   }
 
   async function notifyBookingApproved(booking: any) {
     await createNotification({
       userId: booking.user_id,
+      schoolIdValue: booking.school_id,
       title: "Tempahan diluluskan",
-      message: `Tempahan anda untuk ${booking.rooms?.room_name || "bilik"} pada ${booking.booking_date}, ${booking.start_time} - ${booking.end_time} telah diluluskan.`,
+      message: `Tempahan anda untuk ${booking.rooms?.room_name || "bilik"} pada ${booking.booking_date}, ${String(booking.start_time).slice(0, 5)} - ${String(booking.end_time).slice(0, 5)} telah diluluskan.`,
     })
   }
 
   async function notifyBookingCancelled(booking: any, reason: string) {
     await createNotification({
       userId: booking.user_id,
+      schoolIdValue: booking.school_id,
       title: "Tempahan dibatalkan",
-      message: `Tempahan anda untuk ${booking.rooms?.room_name || "bilik"} pada ${booking.booking_date}, ${booking.start_time} - ${booking.end_time} telah dibatalkan. Sebab: ${reason}`,
+      message: `Tempahan anda untuk ${booking.rooms?.room_name || "bilik"} pada ${booking.booking_date}, ${String(booking.start_time).slice(0, 5)} - ${String(booking.end_time).slice(0, 5)} telah dibatalkan. Sebab: ${reason}`,
     })
   }
 
@@ -320,9 +366,9 @@ export default function DashboardPage() {
         }
       }
 
+      await loadNotifications(profile.id)
       await loadRooms(profile.school_id)
       await loadBookings(profile.school_id, profile.id, profile.role)
-      await loadNotifications()
 
       if (
         profile.role === "admin" ||
@@ -507,7 +553,9 @@ export default function DashboardPage() {
     if (profile?.school_id) {
       await loadBookings(profile.school_id, profile.id, profile.role)
     }
-    await loadNotifications()
+    if (currentUser?.id) {
+      await loadNotifications(currentUser.id)
+    }
   }
 
   async function cancelBooking(booking: any) {
@@ -550,7 +598,9 @@ export default function DashboardPage() {
     if (profile?.school_id) {
       await loadBookings(profile.school_id, profile.id, profile.role)
     }
-    await loadNotifications()
+    if (currentUser?.id) {
+      await loadNotifications(currentUser.id)
+    }
   }
 
   async function handleBooking(e: React.FormEvent<HTMLFormElement>) {
@@ -661,7 +711,7 @@ export default function DashboardPage() {
       setPurpose("")
 
       await loadBookings(schoolId, currentUser.id, profile.role)
-      await loadNotifications()
+      await loadNotifications(currentUser.id)
     } finally {
       setSubmittingBooking(false)
     }
@@ -1075,33 +1125,30 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      <div
-        style={{
-          background: "#ffffff",
-          borderRadius: 16,
-          padding: 24,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-          marginBottom: 24,
-        }}
-      >
+      <div style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Notifikasi</h2>
 
         {notifications.length === 0 ? (
-          <p>Belum ada notifikasi.</p>
+          <p style={{ color: "#64748b" }}>Belum ada notifikasi.</p>
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
-            {notifications.map((notification) => (
+            {notifications.slice(0, 5).map((item: any) => (
               <div
-                key={notification.id}
+                key={item.id}
                 style={{
-                  padding: 12,
-                  borderRadius: 10,
-                  background: notification.is_read ? "#f8fafc" : "#eff6ff",
                   border: "1px solid #dbeafe",
+                  background: item.is_read ? "#f8fafc" : "#eff6ff",
+                  borderRadius: 12,
+                  padding: 14,
                 }}
               >
-                <strong>{notification.title}</strong>
-                <p style={{ margin: "6px 0 0 0" }}>{notification.message}</p>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>{item.title}</div>
+                <div style={{ color: "#334155", fontSize: 14, marginBottom: 6 }}>
+                  {item.message}
+                </div>
+                <div style={{ fontSize: 12, color: "#64748b" }}>
+                  {new Date(item.created_at).toLocaleString("ms-MY")}
+                </div>
               </div>
             ))}
           </div>
