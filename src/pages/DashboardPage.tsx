@@ -34,6 +34,7 @@ export default function DashboardPage() {
   })
   const [notifications, setNotifications] = useState<any[]>([])
   const [pendingUsers, setPendingUsers] = useState<any[]>([])
+  const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({})
   const [currentUserId, setCurrentUserId] = useState("")
   const [roomId, setRoomId] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")
@@ -180,7 +181,14 @@ export default function DashboardPage() {
       return
     }
 
-    setPendingUsers(data || [])
+    const rows = data || []
+    setPendingUsers(rows)
+
+    const roleDefaults: Record<string, string> = {}
+    rows.forEach((user: any) => {
+      roleDefaults[user.id] = user.role || "guru"
+    })
+    setSelectedRoles(roleDefaults)
   }
 
   const loadNotifications = async (userId: string) => {
@@ -462,21 +470,27 @@ export default function DashboardPage() {
     const confirmed = window.confirm("Luluskan pengguna ini?")
     if (!confirmed) return
 
+    const selectedRole = selectedRoles[userId] || "guru"
+    const schoolId = profile?.school_id
+
     const { error } = await supabase
       .from("profiles")
-      .update({ approval_status: "approved" })
+      .update({
+        approval_status: "approved",
+        role: selectedRole,
+      })
       .eq("id", userId)
 
     if (error) {
+      console.error("Gagal meluluskan pengguna:", error)
       alert("Gagal meluluskan pengguna.")
-      console.error(error)
       return
     }
 
     alert("Pengguna berjaya diluluskan.")
 
-    if (profile?.school_id) {
-      await loadPendingUsers(profile.school_id)
+    if (schoolId) {
+      await loadPendingUsers(schoolId)
     }
   }
 
@@ -1235,6 +1249,33 @@ export default function DashboardPage() {
                   </div>
                   <div style={{ fontSize: 14, color: "#b45309", fontWeight: 600 }}>
                     Status: Menunggu Kelulusan
+                  </div>
+
+                  <div style={{ display: "grid", gap: 6 }}>
+                    <label style={{ fontSize: 14, color: "#475569", fontWeight: 600 }}>
+                      Pilih peranan
+                    </label>
+
+                    <select
+                      value={selectedRoles[user.id] || "guru"}
+                      onChange={(e) =>
+                        setSelectedRoles((prev) => ({
+                          ...prev,
+                          [user.id]: e.target.value,
+                        }))
+                      }
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        border: "1px solid #cbd5e1",
+                        maxWidth: 260,
+                      }}
+                    >
+                      <option value="guru">Guru</option>
+                      <option value="penolong_kanan">Penolong Kanan</option>
+                      <option value="pengetua">Pengetua</option>
+                      <option value="admin">Admin</option>
+                    </select>
                   </div>
 
                   <div style={{ marginTop: 4 }}>

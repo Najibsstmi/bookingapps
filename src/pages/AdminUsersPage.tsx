@@ -109,6 +109,20 @@ export default function AdminUsersPage() {
     }
   }
 
+  const updateRole = async (userId: string, newRole: string) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: newRole })
+      .eq("id", userId)
+
+    if (error) {
+      alert("Gagal update role")
+    } else {
+      alert("Role berjaya dikemaskini")
+      loadUsers()
+    }
+  }
+
   if (loading) {
     return <div style={{ padding: 24 }}>Loading...</div>
   }
@@ -145,6 +159,7 @@ export default function AdminUsersPage() {
               <th style={thStyle}>Nama</th>
               <th style={thStyle}>Email</th>
               <th style={thStyle}>Role</th>
+              <th style={thStyle}>Tukar Role</th>
               <th style={thStyle}>Status</th>
               <th style={thStyle}>Tindakan</th>
             </tr>
@@ -155,6 +170,18 @@ export default function AdminUsersPage() {
                 <td style={tdStyle}>{item.full_name}</td>
                 <td style={tdStyle}>{item.email}</td>
                 <td style={tdStyle}>{item.role}</td>
+                <td style={tdStyle}>
+                  <select
+                    value={item.role}
+                    onChange={(e) => updateRole(item.id, e.target.value)}
+                    style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #ccc" }}
+                  >
+                    <option value="guru">Guru</option>
+                    <option value="admin">Admin</option>
+                    <option value="pengetua">Pengetua</option>
+                    <option value="penolong_kanan">Penolong Kanan</option>
+                  </select>
+                </td>
                 <td style={tdStyle}>{item.approval_status}</td>
                 <td style={tdStyle}>
                   {item.approval_status === "pending" ? (
