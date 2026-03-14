@@ -44,7 +44,8 @@ export default function DashboardPage() {
   const [endTime, setEndTime] = useState("")
   const [purpose, setPurpose] = useState("")
   const [submittingBooking, setSubmittingBooking] = useState(false)
-  const [showApproved, setShowApproved] = useState(false)
+  const [showApprovedBookings, setShowApprovedBookings] = useState(false)
+  const [showRejectedBookings, setShowRejectedBookings] = useState(false)
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -775,6 +776,24 @@ export default function DashboardPage() {
     cursor: "pointer",
   }
 
+  const accordionHeaderStyle: React.CSSProperties = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    cursor: "pointer",
+    padding: "10px 0",
+    userSelect: "none",
+  }
+
+  const accordionCountStyle: React.CSSProperties = {
+    fontWeight: 700,
+  }
+
+  const accordionIconStyle: React.CSSProperties = {
+    fontSize: 18,
+    fontWeight: 700,
+  }
+
   function isSlotBooked(slotStart: string) {
     const slotIndex = timeSlots.indexOf(slotStart)
     const slotEnd = timeSlots[slotIndex + 1]
@@ -1324,13 +1343,19 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <h3
-                  style={{ marginBottom: 12, cursor: "pointer", color: "#15803d" }}
-                  onClick={() => setShowApproved(!showApproved)}
+                <div
+                  style={accordionHeaderStyle}
+                  onClick={() => setShowApprovedBookings((prev) => !prev)}
                 >
-                  Diluluskan ({approvedBookings.length}) {showApproved ? "▲" : "▼"}
-                </h3>
-                {showApproved ? (
+                  <h3 style={{ color: "#15803d", margin: 0 }}>
+                    Diluluskan <span style={accordionCountStyle}>({approvedBookings.length})</span>
+                  </h3>
+                  <span style={accordionIconStyle}>
+                    {showApprovedBookings ? "▲" : "▼"}
+                  </span>
+                </div>
+
+                {showApprovedBookings ? (
                   approvedBookings.length === 0 ? (
                     <p style={{ color: "#64748b" }}>Tiada tempahan diluluskan.</p>
                   ) : (
@@ -1342,16 +1367,27 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <h3 style={{ marginBottom: 12, color: "#b91c1c" }}>
-                  Dibatalkan ({cancelledBookings.length})
-                </h3>
-                {cancelledBookings.length === 0 ? (
-                  <p style={{ color: "#64748b" }}>Tiada tempahan dibatalkan.</p>
-                ) : (
-                  <div style={{ display: "grid", gap: 14 }}>
-                    {cancelledBookings.map(renderBookingCard)}
-                  </div>
-                )}
+                <div
+                  style={accordionHeaderStyle}
+                  onClick={() => setShowRejectedBookings((prev) => !prev)}
+                >
+                  <h3 style={{ color: "#b91c1c", margin: 0 }}>
+                    Dibatalkan <span style={accordionCountStyle}>({cancelledBookings.length})</span>
+                  </h3>
+                  <span style={accordionIconStyle}>
+                    {showRejectedBookings ? "▲" : "▼"}
+                  </span>
+                </div>
+
+                {showRejectedBookings ? (
+                  cancelledBookings.length === 0 ? (
+                    <p style={{ color: "#64748b" }}>Tiada tempahan dibatalkan.</p>
+                  ) : (
+                    <div style={{ display: "grid", gap: 14 }}>
+                      {cancelledBookings.map(renderBookingCard)}
+                    </div>
+                  )
+                ) : null}
               </div>
             </div>
           ) : (
