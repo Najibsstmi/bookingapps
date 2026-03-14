@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 
 type Profile = {
@@ -51,7 +52,7 @@ export default function AdminUsersPage() {
       return
     }
 
-    const allowedRoles = ["admin", "pengetua", "penolong_kanan", "penyelaras_bilik_khas"]
+    const allowedRoles = ["admin", "pengetua", "penolong_kanan"]
 
     if (
       myProfile.approval_status !== "approved" ||
@@ -142,6 +143,19 @@ export default function AdminUsersPage() {
 
   return (
     <div style={{ maxWidth: 1000, margin: "40px auto", padding: 24 }}>
+      <Link
+        to="/dashboard"
+        style={{
+          display: "inline-block",
+          marginBottom: 16,
+          textDecoration: "none",
+          color: "#16325B",
+          fontWeight: 600,
+        }}
+      >
+        ← Kembali ke Dashboard
+      </Link>
+
       <h1>Senarai Pengguna Sekolah</h1>
       <p>Admin boleh semak pengguna yang masih menunggu kelulusan.</p>
       <button

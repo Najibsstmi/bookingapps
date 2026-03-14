@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { seedDefaultRooms } from "../lib/roomService"
 
@@ -1396,6 +1397,25 @@ export default function DashboardPage() {
           }}
         >
           <h2 style={{ marginTop: 0 }}>Pengurusan Pengguna</h2>
+          <p style={{ marginBottom: 16 }}>
+            Lihat semua pengguna sekolah dan tukar peranan mereka.
+          </p>
+
+          <Link
+            to="/admin/users"
+            style={{
+              display: "inline-block",
+              background: "#16325B",
+              color: "#fff",
+              textDecoration: "none",
+              padding: "10px 16px",
+              borderRadius: 10,
+              fontWeight: 600,
+              marginBottom: 16,
+            }}
+          >
+            Buka Pengurusan Pengguna
+          </Link>
 
           {loadingUsers ? (
             <p>Sedang memuatkan senarai pengguna...</p>
