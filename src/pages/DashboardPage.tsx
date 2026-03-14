@@ -46,6 +46,9 @@ export default function DashboardPage() {
   const [submittingBooking, setSubmittingBooking] = useState(false)
   const [showApprovedBookings, setShowApprovedBookings] = useState(false)
   const [showRejectedBookings, setShowRejectedBookings] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [schoolLogoUrl, setSchoolLogoUrl] = useState<string | null>(null)
+  const [schoolName, setSchoolName] = useState<string>("")
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -73,6 +76,22 @@ export default function DashboardPage() {
 
       if (!profileError) {
         setProfile(profileData)
+
+        if (profileData.school_id) {
+          const { data: schoolData, error: schoolError } = await supabase
+            .from("schools")
+            .select("school_name, logo_url")
+            .eq("id", profileData.school_id)
+            .single()
+
+          if (!schoolError && schoolData) {
+            setSchoolLogoUrl(schoolData.logo_url ?? null)
+            setSchoolName(schoolData.school_name ?? "")
+          }
+        } else {
+          setSchoolLogoUrl(null)
+          setSchoolName("")
+        }
       }
 
       setLoading(false)
@@ -1086,46 +1105,101 @@ export default function DashboardPage() {
       }}
     >
       <div style={cardStyle}>
-        <h1 style={{ marginTop: 0 }}>Dashboard</h1>
-        <p>Selamat datang, {profile.full_name || "Pengguna"}.</p>
-        <p>Email: {profile.email}</p>
-        <p>Peranan: {profile.role}</p>
-        <p>Status kelulusan: {profile.approval_status}</p>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            marginBottom: 20,
+            flexWrap: "wrap",
+          }}
+        >
+          {schoolLogoUrl ? (
+            <img
+              src={schoolLogoUrl}
+              alt="Logo sekolah"
+              style={{
+                width: 72,
+                height: 72,
+                objectFit: "contain",
+                borderRadius: 12,
+                background: "#fff",
+                padding: 6,
+                border: "1px solid #e2e8f0",
+              }}
+            />
+          ) : null}
+
+          <div>
+            <h1 style={{ margin: 0 }}>Dashboard</h1>
+            <p style={{ margin: "6px 0 0 0", fontWeight: 600 }}>
+              {schoolName || "Sekolah Anda"}
+            </p>
+            <p style={{ margin: "6px 0 0 0" }}>
+              Selamat datang, {profile?.full_name || profile?.email}.
+            </p>
+          </div>
+        </div>
+
+        <p>Email: {profile?.email}</p>
+        <p>Peranan: {profile?.role}</p>
+        <p>Status kelulusan: {profile?.approval_status}</p>
 
         <button onClick={handleLogout} style={primaryButtonStyle}>
           Log Keluar
         </button>
       </div>
 
-      <div style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Notifikasi</h2>
+      <section
+        style={{
+          background: "#fff",
+          borderRadius: 16,
+          padding: 24,
+          marginTop: 24,
+          boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
+        }}
+      >
+        <div
+          onClick={() => setShowNotifications((prev) => !prev)}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            cursor: "pointer",
+            userSelect: "none",
+          }}
+        >
+          <h2 style={{ margin: 0 }}>
+            Notifikasi {notifications.length > 0 ? `(${notifications.length})` : ""}
+          </h2>
+          <span style={{ fontSize: 18, fontWeight: 700 }}>
+            {showNotifications ? "▲" : "▼"}
+          </span>
+        </div>
 
-        {notifications.length === 0 ? (
-          <p style={{ color: "#64748b" }}>Belum ada notifikasi.</p>
-        ) : (
-          <div style={{ display: "grid", gap: 12 }}>
-            {notifications.slice(0, 5).map((item: any) => (
-              <div
-                key={item.id}
-                style={{
-                  border: "1px solid #dbeafe",
-                  background: item.is_read ? "#f8fafc" : "#eff6ff",
-                  borderRadius: 12,
-                  padding: 14,
-                }}
-              >
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>{item.title}</div>
-                <div style={{ color: "#334155", fontSize: 14, marginBottom: 6 }}>
+        {showNotifications && (
+          <div style={{ marginTop: 16 }}>
+            {notifications.length === 0 ? (
+              <p>Belum ada notifikasi.</p>
+            ) : (
+              notifications.map((item: any) => (
+                <div
+                  key={item.id}
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 10,
+                    marginBottom: 10,
+                    background: "#f8fafc",
+                  }}
+                >
                   {item.message}
                 </div>
-                <div style={{ fontSize: 12, color: "#64748b" }}>
-                  {new Date(item.created_at).toLocaleString("ms-MY")}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
-      </div>
+      </section>
 
       {isAdmin ? (
         <div
@@ -1315,6 +1389,38 @@ export default function DashboardPage() {
             }}
           >
             Buka Pengurusan Bilik
+          </Link>
+        </section>
+      )}
+
+      {(profile?.role === "admin" || profile?.role === "pengetua") && (
+        <section
+          style={{
+            background: "#fff",
+            borderRadius: 16,
+            padding: 24,
+            marginTop: 24,
+            boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>Tetapan Sekolah</h2>
+          <p style={{ marginBottom: 16 }}>
+            Upload logo sekolah supaya dashboard nampak seperti milik sekolah anda.
+          </p>
+
+          <Link
+            to="/school/settings"
+            style={{
+              display: "inline-block",
+              background: "#16325B",
+              color: "#fff",
+              textDecoration: "none",
+              padding: "10px 16px",
+              borderRadius: 10,
+              fontWeight: 600,
+            }}
+          >
+            Buka Tetapan Sekolah
           </Link>
         </section>
       )}

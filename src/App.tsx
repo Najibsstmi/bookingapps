@@ -4,6 +4,7 @@ import RegisterPage from "./pages/RegisterPage"
 import DashboardPage from "./pages/DashboardPage"
 import AdminUsersPage from "./pages/AdminUsersPage"
 import AdminRoomsPage from "./pages/AdminRoomsPage"
+import SchoolSettingsPage from "./pages/SchoolSettingsPage"
 import ForgotPasswordPage from "./pages/ForgotPasswordPage"
 import UpdatePasswordPage from "./pages/UpdatePasswordPage"
 import ProtectedRoute from "./components/ProtectedRoute"
@@ -41,6 +42,8 @@ function App() {
     </ProtectedRoute>
   }
 />
+
+<Route path="/school/settings" element={<SchoolSettingsPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 <Route path="/update-password" element={<UpdatePasswordPage />} />
       </Routes>
