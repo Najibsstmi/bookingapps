@@ -47,8 +47,8 @@ export default function DashboardPage() {
   const [showApprovedBookings, setShowApprovedBookings] = useState(false)
   const [showRejectedBookings, setShowRejectedBookings] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
-  const [schoolLogoUrl, setSchoolLogoUrl] = useState<string | null>(null)
-  const [schoolName, setSchoolName] = useState<string>("")
+  const [schoolLogoUrl, setSchoolLogoUrl] = useState("")
+  const [schoolName, setSchoolName] = useState("")
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -74,7 +74,7 @@ export default function DashboardPage() {
       console.log("PROFILE DATA:", profileData)
       console.log("PROFILE ERROR:", profileError)
 
-      if (!profileError) {
+      if (!profileError && profileData) {
         setProfile(profileData)
 
         if (profileData.school_id) {
@@ -85,12 +85,9 @@ export default function DashboardPage() {
             .single()
 
           if (!schoolError && schoolData) {
-            setSchoolLogoUrl(schoolData.logo_url ?? null)
-            setSchoolName(schoolData.school_name ?? "")
+            setSchoolName(schoolData.school_name || "")
+            setSchoolLogoUrl(schoolData.logo_url || "")
           }
-        } else {
-          setSchoolLogoUrl(null)
-          setSchoolName("")
         }
       }
 
