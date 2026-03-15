@@ -1059,26 +1059,22 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
-        {isAdmin && booking.status === "pending" ? (
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
-            <button
-              onClick={() => approveBooking(booking)}
-              type="button"
-              style={{
-                ...primaryButtonStyle,
-                background: "#15803d",
-              }}
-            >
-              Luluskan
-            </button>
+        {isAdmin && (booking.status === "pending" || booking.status === "approved") ? (
+          <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+            {booking.status === "pending" ? (
+              <button
+                onClick={() => approveBooking(booking)}
+                type="button"
+                style={{ ...primaryButtonStyle, background: "#15803d" }}
+              >
+                Luluskan
+              </button>
+            ) : null}
 
             <button
               onClick={() => cancelBooking(booking)}
               type="button"
-              style={{
-                ...primaryButtonStyle,
-                background: "#b91c1c",
-              }}
+              style={{ ...primaryButtonStyle, background: "#b91c1c" }}
             >
               Batalkan
             </button>
@@ -1236,7 +1232,22 @@ export default function DashboardPage() {
             userSelect: "none",
           }}
         >
-          <h2 style={{ margin: 0 }}>
+          <h2 style={{ margin: 0, display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#f59e0b"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
+              <path d="M9 17a3 3 0 0 0 6 0" />
+            </svg>
             Notifikasi {notifications.length > 0 ? `(${notifications.length})` : ""}
           </h2>
           <span style={{ fontSize: 18, fontWeight: 700 }}>
@@ -1414,7 +1425,9 @@ export default function DashboardPage() {
           <Link
             to="/admin/users"
             style={{
-              display: "inline-block",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
               background: "#16325B",
               color: "#fff",
               textDecoration: "none",
@@ -1423,6 +1436,23 @@ export default function DashboardPage() {
               fontWeight: 600,
             }}
           >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="8.5" cy="7" r="4" />
+              <path d="M20 8v6" />
+              <path d="M23 11h-6" />
+            </svg>
             Buka Pengurusan Pengguna
           </Link>
         </section>
@@ -1446,7 +1476,9 @@ export default function DashboardPage() {
           <Link
             to="/admin/rooms"
             style={{
-              display: "inline-block",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
               background: "#16325B",
               color: "#fff",
               textDecoration: "none",
@@ -1455,6 +1487,22 @@ export default function DashboardPage() {
               fontWeight: 600,
             }}
           >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 21h18" />
+              <path d="M7 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16" />
+              <path d="M10 13h.01" />
+            </svg>
             Buka Pengurusan Bilik
           </Link>
         </section>
@@ -1478,7 +1526,9 @@ export default function DashboardPage() {
           <Link
             to="/school/settings"
             style={{
-              display: "inline-block",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
               background: "#16325B",
               color: "#fff",
               textDecoration: "none",
@@ -1487,6 +1537,21 @@ export default function DashboardPage() {
               fontWeight: 600,
             }}
           >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
             Buka Tetapan Sekolah
           </Link>
         </section>
@@ -1494,8 +1559,33 @@ export default function DashboardPage() {
 
       {isApproved && (isAdmin || isGuru) ? (
         <div style={cardStyle}>
-          <h2 style={{ marginTop: 0 }}>
-            {isAdmin ? "Senarai Semua Tempahan" : "Tempahan Saya"}
+          <h2 style={{ marginTop: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            {isAdmin ? (
+              <>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="8" y="2" width="8" height="4" rx="1" />
+                  <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
+                  <path d="M12 11h4" />
+                  <path d="M12 16h4" />
+                  <path d="M8 11h.01" />
+                  <path d="M8 16h.01" />
+                </svg>
+                Senarai Semua Tempahan
+              </>
+            ) : (
+              "Tempahan Saya"
+            )}
           </h2>
 
           {bookings.length === 0 ? (
