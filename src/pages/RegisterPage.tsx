@@ -2,20 +2,19 @@ import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { Link } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 
-type MasterSchool = {
-  id: number
+type SchoolOption = {
   school_code: string
   school_name: string
-  school_type: string | null
-  school_level: string | null
-  state: string
-  district: string
 }
 
 type ActiveSchool = {
   id: string
   school_code: string | null
   school_name: string
+}
+
+function uniqueSorted(values: string[]) {
+  return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b))
 }
 
 export default function RegisterPage() {
@@ -28,104 +27,159 @@ export default function RegisterPage() {
   const [district, setDistrict] = useState("")
   const [selectedSchoolCode, setSelectedSchoolCode] = useState("")
 
-  const [masterSchools, setMasterSchools] = useState<MasterSchool[]>([])
+  const [schoolTypes, setSchoolTypes] = useState<string[]>([])
+  const [states, setStates] = useState<string[]>([])
+  const [districts, setDistricts] = useState<string[]>([])
+  const [schools, setSchools] = useState<SchoolOption[]>([])
+
   const [loadingSchools, setLoadingSchools] = useState(true)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
 
   useEffect(() => {
-    const loadSchoolsMaster = async () => {
+    const loadSchoolTypes = async () => {
       setLoadingSchools(true)
 
       const { data, error } = await supabase
         .from("schools_master")
-        .select(
-          "id, school_code, school_name, school_type, school_level, state, district"
-        )
-        .order("school_name", { ascending: true })
+        .select("school_type")
 
       if (error) {
-        console.error("Ralat ambil schools_master:", error)
+        console.error("Ralat ambil school_type:", error)
         setMessage("Gagal memuatkan senarai sekolah.")
       } else {
-        setMasterSchools((data ?? []) as MasterSchool[])
+        const types = uniqueSorted(
+          (data ?? [])
+            .map((item: any) => String(item.school_type || "").trim())
+            .filter(Boolean)
+        )
+        setSchoolTypes(types)
       }
 
       setLoadingSchools(false)
     }
 
-    loadSchoolsMaster()
+    loadSchoolTypes()
   }, [])
 
-  const schoolTypes = useMemo(() => {
-    return [...new Set(masterSchools.map((item) => item.school_type || "").filter(Boolean))].sort(
-      (a, b) => a.localeCompare(b)
-    )
-  }, [masterSchools])
+  useEffect(() => {
+    const loadStates = async () => {
+      if (!schoolType) {
+        setStates([])
+        return
+      }
 
-  const states = useMemo(() => {
-    if (!schoolType) return []
-    return [
-      ...new Set(
-        masterSchools
-          .filter((item) => (item.school_type || "") === schoolType)
-          .map((item) => item.state)
-          .filter(Boolean)
-      ),
-    ].sort((a, b) => a.localeCompare(b))
-  }, [masterSchools, schoolType])
+      const { data, error } = await supabase
+        .from("schools_master")
+        .select("state")
+        .eq("school_type", schoolType)
 
-  const districts = useMemo(() => {
-    if (!schoolType || !stateValue) return []
-    return [
-      ...new Set(
-        masterSchools
-          .filter(
-            (item) =>
-              (item.school_type || "") === schoolType &&
-              item.state === stateValue
-          )
-          .map((item) => item.district)
-          .filter(Boolean)
-      ),
-    ].sort((a, b) => a.localeCompare(b))
-  }, [masterSchools, schoolType, stateValue])
+      if (error) {
+        console.error("Ralat ambil state:", error)
+        setStates([])
+      } else {
+        const stateOptions = uniqueSorted(
+          (data ?? [])
+            .map((item: any) => String(item.state || "").trim())
+            .filter(Boolean)
+        )
+        setStates(stateOptions)
+      }
+    }
 
-  const filteredSchools = useMemo(() => {
-    if (!schoolType || !stateValue || !district) return []
-    return masterSchools
-      .filter(
-        (item) =>
-          (item.school_type || "") === schoolType &&
-          item.state === stateValue &&
-          item.district === district
-      )
-      .sort((a, b) => a.school_name.localeCompare(b.school_name))
-  }, [masterSchools, schoolType, stateValue, district])
+    loadStates()
+  }, [schoolType])
+
+  useEffect(() => {
+    const loadDistricts = async () => {
+      if (!schoolType || !stateValue) {
+        setDistricts([])
+        return
+      }
+
+      const { data, error } = await supabase
+        .from("schools_master")
+        .select("district")
+        .eq("school_type", schoolType)
+        .eq("state", stateValue)
+
+      if (error) {
+        console.error("Ralat ambil district:", error)
+        setDistricts([])
+      } else {
+        const districtOptions = uniqueSorted(
+          (data ?? [])
+            .map((item: any) => String(item.district || "").trim())
+            .filter(Boolean)
+        )
+        setDistricts(districtOptions)
+      }
+    }
+
+    loadDistricts()
+  }, [schoolType, stateValue])
+
+  useEffect(() => {
+    const loadSchools = async () => {
+      if (!schoolType || !stateValue || !district) {
+        setSchools([])
+        return
+      }
+
+      const { data, error } = await supabase
+        .from("schools_master")
+        .select("school_code, school_name")
+        .eq("school_type", schoolType)
+        .eq("state", stateValue)
+        .eq("district", district)
+        .order("school_name", { ascending: true })
+
+      if (error) {
+        console.error("Ralat ambil nama sekolah:", error)
+        setSchools([])
+      } else {
+        const rows = (data ?? [])
+          .map((item: any) => ({
+            school_code: String(item.school_code || ""),
+            school_name: String(item.school_name || ""),
+          }))
+          .filter((item) => item.school_code && item.school_name)
+        setSchools(rows)
+      }
+    }
+
+    loadSchools()
+  }, [schoolType, stateValue, district])
 
   const selectedSchool = useMemo(() => {
     return (
-      filteredSchools.find((item) => item.school_code === selectedSchoolCode) ||
+      schools.find((item) => item.school_code === selectedSchoolCode) ||
       null
     )
-  }, [filteredSchools, selectedSchoolCode])
+  }, [schools, selectedSchoolCode])
 
   function handleSchoolTypeChange(value: string) {
     setSchoolType(value)
     setStateValue("")
     setDistrict("")
     setSelectedSchoolCode("")
+    setStates([])
+    setDistricts([])
+    setSchools([])
   }
 
   function handleStateChange(value: string) {
     setStateValue(value)
     setDistrict("")
     setSelectedSchoolCode("")
+    setDistricts([])
+    setSchools([])
   }
 
   function handleDistrictChange(value: string) {
     setDistrict(value)
     setSelectedSchoolCode("")
+    setSchools([])
   }
 
   const handleRegister = async (e: FormEvent) => {
@@ -138,6 +192,15 @@ export default function RegisterPage() {
         setMessage("Sila pilih sekolah daripada senarai.")
         return
       }
+
+      const { data: schoolMeta } = await supabase
+        .from("schools_master")
+        .select("school_level")
+        .eq("school_code", selectedSchool.school_code)
+        .eq("school_type", schoolType)
+        .eq("state", stateValue)
+        .eq("district", district)
+        .maybeSingle()
 
       let activeSchoolId = ""
 
@@ -160,7 +223,7 @@ export default function RegisterPage() {
           .insert({
             school_name: selectedSchool.school_name,
             school_code: selectedSchool.school_code,
-            state: selectedSchool.state,
+            state: stateValue,
           })
           .select("id")
           .single()
@@ -200,10 +263,10 @@ export default function RegisterPage() {
             approval_status: approvalStatus,
             school_code: selectedSchool.school_code,
             school_name: selectedSchool.school_name,
-            school_type: selectedSchool.school_type,
-            school_level: selectedSchool.school_level,
-            state: selectedSchool.state,
-            district: selectedSchool.district,
+            school_type: schoolType,
+            school_level: schoolMeta?.school_level ?? null,
+            state: stateValue,
+            district,
           },
         },
       })
@@ -230,6 +293,9 @@ export default function RegisterPage() {
       setStateValue("")
       setDistrict("")
       setSelectedSchoolCode("")
+      setStates([])
+      setDistricts([])
+      setSchools([])
     } finally {
       setLoading(false)
     }
@@ -367,7 +433,7 @@ export default function RegisterPage() {
             disabled={!schoolType || !stateValue || !district}
           >
             <option value="">Pilih nama sekolah</option>
-            {filteredSchools.map((school) => (
+            {schools.map((school) => (
               <option key={school.school_code} value={school.school_code}>
                 {school.school_name} ({school.school_code})
               </option>
