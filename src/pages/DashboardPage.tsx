@@ -437,32 +437,29 @@ export default function DashboardPage() {
     : []
 
   const SESSION_GROUPS = [
-    { key: "pagi", label: "Sesi Pagi", start: "07:00", end: "12:30" },
-    { key: "petang", label: "Sesi Petang", start: "12:30", end: "17:00" },
-    { key: "malam", label: "Sesi Malam", start: "17:00", end: "23:00" },
+    { key: "pagi", label: "Sesi Pagi", slots: ["07:00","07:30","08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00"] },
+    { key: "petang", label: "Sesi Petang", slots: ["12:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30"] },
+    { key: "malam", label: "Sesi Malam", slots: ["17:00","17:30","18:00","18:30","19:00","19:30","20:00","20:30","21:00","21:30","22:00","22:30"] },
   ]
 
-  function generateHalfHourSlots(start: string, end: string) {
-    const slots: string[] = []
-    const [startHour, startMinute] = start.split(":").map(Number)
-    const [endHour, endMinute] = end.split(":").map(Number)
-    let currentMinutes = startHour * 60 + startMinute
-    const endMinutes = endHour * 60 + endMinute
-    while (currentMinutes <= endMinutes) {
-      const hour = Math.floor(currentMinutes / 60)
-      const minute = currentMinutes % 60
-      slots.push(
-        `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
-      )
-      currentMinutes += 30
-    }
-    return slots
-  }
-
   const allTimeSlots = [
-    ...generateHalfHourSlots("07:00", "12:30").slice(0, -1),
-    ...generateHalfHourSlots("12:30", "17:00").slice(0, -1),
-    ...generateHalfHourSlots("17:00", "23:00"),
+    "07:00","07:30",
+    "08:00","08:30",
+    "09:00","09:30",
+    "10:00","10:30",
+    "11:00","11:30",
+    "12:00","12:30",
+    "13:00","13:30",
+    "14:00","14:30",
+    "15:00","15:30",
+    "16:00","16:30",
+    "17:00","17:30",
+    "18:00","18:30",
+    "19:00","19:30",
+    "20:00","20:30",
+    "21:00","21:30",
+    "22:00","22:30",
+    "23:00",
   ]
 
   useEffect(() => {
@@ -1647,7 +1644,7 @@ export default function DashboardPage() {
 
               <div style={{ display: "grid", gap: 10 }}>
                 {SESSION_GROUPS.map((session) => {
-                  const sessionSlots = generateHalfHourSlots(session.start, session.end).slice(0, -1)
+                  const sessionSlots = session.slots
 
                   return (
                     <div key={session.key} style={{ marginBottom: 16 }}>
@@ -1671,7 +1668,7 @@ export default function DashboardPage() {
                           marginBottom: 10,
                         }}
                       >
-                        {session.label} ({session.start} - {session.end}){" "}
+                        {session.label} ({sessionSlots[0]} - {allTimeSlots[allTimeSlots.indexOf(sessionSlots[sessionSlots.length - 1]) + 1] ?? sessionSlots[sessionSlots.length - 1]}){" "}
                         <span style={{ float: "right" }}>
                           {openSessions[session.key as keyof typeof openSessions] ? "▲" : "▼"}
                         </span>
