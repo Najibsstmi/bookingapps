@@ -869,9 +869,6 @@ export default function DashboardPage() {
     if (!slotEnd) return null
 
     const overlappingBooking = roomBookings.find((booking) => {
-      const status = String(booking.status || "").toLowerCase()
-      if (!["pending", "approved"].includes(status)) return false
-
       const bookingStart = String(booking.start_time).slice(0, 5)
       const bookingEnd = String(booking.end_time).slice(0, 5)
 
