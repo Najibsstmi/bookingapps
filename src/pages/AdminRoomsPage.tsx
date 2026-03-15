@@ -176,22 +176,27 @@ export default function AdminRoomsPage() {
   const cardStyle: React.CSSProperties = {
     background: "#fff",
     borderRadius: 16,
-    padding: 24,
-    boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-    marginBottom: 24,
+    padding: "16px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+    marginBottom: 16,
+    width: "100%",
+    boxSizing: "border-box",
   }
 
   const fieldStyle: React.CSSProperties = {
     width: "100%",
-    padding: 12,
+    padding: "10px 12px",
     borderRadius: 10,
     border: "1px solid #ccc",
     marginBottom: 12,
-    fontSize: 16,
+    fontSize: 15,
+    minHeight: "44px",
+    boxSizing: "border-box",
   }
 
   const buttonStyle: React.CSSProperties = {
-    padding: "12px 18px",
+    padding: "10px 14px",
+    minHeight: "44px",
     borderRadius: 10,
     border: "none",
     background: "#1d3557",
@@ -214,7 +219,15 @@ export default function AdminRoomsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: "40px auto", padding: 24 }}>
+    <div
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        padding: "12px",
+        boxSizing: "border-box",
+        overflowX: "hidden",
+      }}
+    >
       <AppHeader
         schoolName={schoolName}
         schoolLogoUrl={schoolLogoUrl}
@@ -235,8 +248,17 @@ export default function AdminRoomsPage() {
       </Link>
 
       <div style={cardStyle}>
-        <h1 style={{ marginTop: 0 }}>Pengurusan Bilik</h1>
-        <p>Tambah bilik baru dan urus status aktif bilik sekolah.</p>
+        <h1
+          style={{
+            fontSize: "clamp(22px, 6vw, 36px)",
+            lineHeight: 1.1,
+            margin: 0,
+            wordBreak: "break-word",
+          }}
+        >
+          Pengurusan Bilik
+        </h1>
+        <p style={{ marginTop: 10, fontSize: 14 }}>Tambah bilik baru dan urus status aktif bilik sekolah.</p>
         {message ? <p style={{ color: "#15803d" }}>{message}</p> : null}
       </div>
 
@@ -276,8 +298,18 @@ export default function AdminRoomsPage() {
         {rooms.length === 0 ? (
           <p>Belum ada bilik.</p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <>
+            <p style={{ marginTop: 8, marginBottom: 8, fontSize: "12px", color: "#6b7280" }}>
+              Slide ke kanan untuk lihat semua maklumat →
+            </p>
+            <div
+              style={{
+                overflowX: "auto",
+                width: "100%",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              <table style={{ minWidth: "600px", width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   <th style={thStyle}>Nama Bilik</th>
@@ -293,10 +325,10 @@ export default function AdminRoomsPage() {
                     <td style={tdStyle}>{room.room_name}</td>
                     <td style={tdStyle}>{room.room_category || "-"}</td>
                     <td style={tdStyle}>{room.capacity ?? "-"}</td>
-                    <td style={tdStyle}>
+                    <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
                       {room.is_active ? "Aktif" : "Tidak Aktif"}
                     </td>
-                    <td style={tdStyle}>
+                    <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
                       <button
                         onClick={() => toggleRoom(room.id, room.is_active)}
                         style={{
@@ -311,8 +343,9 @@ export default function AdminRoomsPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

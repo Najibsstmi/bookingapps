@@ -199,57 +199,72 @@ export default function AdminUsersPage() {
       {message && <p style={{ marginTop: 16 }}>{message}</p>}
 
       {!message && (
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            marginTop: 20,
-          }}
-        >
-          <thead>
-            <tr>
-              <th style={thStyle}>Nama</th>
-              <th style={thStyle}>Email</th>
-              <th style={thStyle}>Role</th>
-              <th style={thStyle}>Tukar Role</th>
-              <th style={thStyle}>Status</th>
-              <th style={thStyle}>Tindakan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((item) => (
-              <tr key={item.id}>
-                <td style={tdStyle}>{item.full_name}</td>
-                <td style={tdStyle}>{item.email}</td>
-                <td style={tdStyle}>{item.role}</td>
-                <td style={tdStyle}>
-                  <select
-                    value={item.role}
-                    onChange={(e) => updateRole(item.id, e.target.value)}
-                    disabled={savingUserId === item.id}
-                    style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #ccc" }}
-                  >
-                    <option value="guru">Guru</option>
-                    <option value="admin">Admin</option>
-                    <option value="pengetua">Pengetua</option>
-                    <option value="penolong_kanan">Penolong Kanan</option>
-                  </select>
-                </td>
-                <td style={tdStyle}>{item.approval_status}</td>
-                <td style={tdStyle}>
-                  {item.approval_status === "pending" ? (
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => handleApprove(item.id)}>Approve</button>
-                      <button onClick={() => handleReject(item.id)}>Reject</button>
-                    </div>
-                  ) : (
-                    <span>-</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <p style={{ marginTop: 10, marginBottom: 8, fontSize: "12px", color: "#6b7280" }}>
+            Slide ke kanan untuk lihat semua maklumat →
+          </p>
+
+          <div
+            style={{
+              overflowX: "auto",
+              width: "100%",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            <table
+              style={{
+                minWidth: "600px",
+                width: "100%",
+                borderCollapse: "collapse",
+                marginTop: 8,
+              }}
+            >
+              <thead>
+                <tr>
+                  <th style={thStyle}>Nama</th>
+                  <th style={thStyle}>Email</th>
+                  <th style={thStyle}>Role</th>
+                  <th style={thStyle}>Tukar Role</th>
+                  <th style={thStyle}>Status</th>
+                  <th style={thStyle}>Tindakan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((item) => (
+                  <tr key={item.id}>
+                    <td style={tdStyle}>{item.full_name}</td>
+                    <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>{item.email}</td>
+                    <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>{item.role}</td>
+                    <td style={tdStyle}>
+                      <select
+                        value={item.role}
+                        onChange={(e) => updateRole(item.id, e.target.value)}
+                        disabled={savingUserId === item.id}
+                        style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #ccc", minHeight: "44px" }}
+                      >
+                        <option value="guru">Guru</option>
+                        <option value="admin">Admin</option>
+                        <option value="pengetua">Pengetua</option>
+                        <option value="penolong_kanan">Penolong Kanan</option>
+                      </select>
+                    </td>
+                    <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>{item.approval_status}</td>
+                    <td style={tdStyle}>
+                      {item.approval_status === "pending" ? (
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => handleApprove(item.id)}>Approve</button>
+                          <button onClick={() => handleReject(item.id)}>Reject</button>
+                        </div>
+                      ) : (
+                        <span>-</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   )

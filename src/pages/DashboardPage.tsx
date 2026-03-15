@@ -22,12 +22,26 @@ type Profile = {
   school_id: string
 }
 
+type BookingForSlot = {
+  start_time: string
+  end_time: string
+  status?: string
+  profiles?: {
+    full_name?: string
+  } | null
+}
+
+type Slot = {
+  start: string
+  end: string
+}
+
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [rooms, setRooms] = useState<Room[]>([])
   const [bookings, setBookings] = useState<any[]>([])
-  const [roomBookings, setRoomBookings] = useState<any[]>([])
+  const [roomBookings, setRoomBookings] = useState<BookingForSlot[]>([])
   const [selectedSlots, setSelectedSlots] = useState<string[]>([])
   const [stats, setStats] = useState({
     totalRooms: 0,
@@ -44,6 +58,7 @@ export default function DashboardPage() {
   const [startTime, setStartTime] = useState("")
   const [endTime, setEndTime] = useState("")
   const [purpose, setPurpose] = useState("")
+  const [message, setMessage] = useState("")
   const [submittingBooking, setSubmittingBooking] = useState(false)
   const [showApprovedBookings, setShowApprovedBookings] = useState(false)
   const [showRejectedBookings, setShowRejectedBookings] = useState(false)
@@ -457,6 +472,7 @@ export default function DashboardPage() {
         .select(`
           start_time,
           end_time,
+          status,
           booking_date,
           profiles (
             full_name
@@ -467,7 +483,7 @@ export default function DashboardPage() {
         .order("start_time", { ascending: true })
 
       if (!error) {
-        setRoomBookings(data || [])
+        setRoomBookings((data ?? []) as BookingForSlot[])
       }
     }
 
@@ -636,10 +652,13 @@ export default function DashboardPage() {
 
   async function handleBooking(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    setMessage("")
 
     const currentUser = currentUserId ? { id: currentUserId } : null
     const schoolId = profile?.school_id
     const selectedRoomId = roomId
+    const selectedStartTime = startTime
+    const selectedEndTime = endTime
     const trimmedPurpose = purpose.trim()
 
     if (!currentUser || !profile || !schoolId) {
@@ -662,12 +681,12 @@ export default function DashboardPage() {
       return
     }
 
-    if (!startTime || !endTime) {
+    if (!selectedStartTime || !selectedEndTime) {
       alert("Sila pilih masa mula dan masa tamat.")
       return
     }
 
-    if (startTime >= endTime) {
+    if (selectedStartTime >= selectedEndTime) {
       alert("Masa tamat mestilah lebih lewat daripada masa mula.")
       return
     }
@@ -680,14 +699,30 @@ export default function DashboardPage() {
     setSubmittingBooking(true)
 
     try {
+      const hasOverlap = roomBookings.some((booking) => {
+        const bookingStart = String(booking.start_time).slice(0, 5)
+        const bookingEnd = String(booking.end_time).slice(0, 5)
+        return (
+          booking.status !== "dibatalkan" &&
+          booking.status !== "cancelled" &&
+          bookingStart < selectedEndTime &&
+          bookingEnd > selectedStartTime
+        )
+      })
+
+      if (hasOverlap) {
+        setMessage("Slot masa ini bertindih dengan tempahan sedia ada.")
+        return
+      }
+
       const { data: clashes, error: clashError } = await supabase
         .from("bookings")
         .select("id")
         .eq("room_id", selectedRoomId)
         .eq("booking_date", bookingDate)
         .eq("status", "approved")
-        .lt("start_time", endTime)
-        .gt("end_time", startTime)
+        .lt("start_time", selectedEndTime)
+        .gt("end_time", selectedStartTime)
 
       if (clashError) {
         alert("Gagal semak pertindihan tempahan.")
@@ -707,8 +742,8 @@ export default function DashboardPage() {
           room_id: selectedRoomId,
           user_id: currentUser.id,
           booking_date: bookingDate,
-          start_time: startTime,
-          end_time: endTime,
+          start_time: selectedStartTime,
+          end_time: selectedEndTime,
           purpose: trimmedPurpose,
           status: "pending",
         })
@@ -724,8 +759,8 @@ export default function DashboardPage() {
       await notifyBookingCreated({
         schoolId,
         bookingDate,
-        startTime,
-        endTime,
+        startTime: selectedStartTime,
+        endTime: selectedEndTime,
         roomName: selectedRoom?.room_name || "Bilik",
         teacherName: profile.full_name || "Pengguna",
         teacherId: profile.id,
@@ -811,14 +846,42 @@ export default function DashboardPage() {
     fontWeight: 700,
   }
 
+  function isSlotAvailable(slot: Slot, slotBookings: BookingForSlot[]) {
+    const activeBookings = slotBookings.filter(
+      (booking) => booking.status !== "dibatalkan" && booking.status !== "cancelled"
+    )
+
+    const hasOverlap = activeBookings.some((booking) => {
+      const bookingStart = String(booking.start_time).slice(0, 5)
+      const bookingEnd = String(booking.end_time).slice(0, 5)
+      const slotStart = slot.start
+      const slotEnd = slot.end
+      return bookingStart < slotEnd && bookingEnd > slotStart
+    })
+
+    return !hasOverlap
+  }
+
   function isSlotBooked(slotStart: string) {
     const slotIndex = timeSlots.indexOf(slotStart)
     const slotEnd = timeSlots[slotIndex + 1]
 
     if (!slotEnd) return null
 
-    const booking = roomBookings.find((b: any) => {
-      return b.start_time.slice(0, 5) <= slotStart && b.end_time.slice(0, 5) > slotStart
+    const slot: Slot = { start: slotStart, end: slotEnd }
+    const available = isSlotAvailable(slot, roomBookings)
+
+    if (available) {
+      return {
+        booked: false,
+        end: slotEnd,
+      }
+    }
+
+    const booking = roomBookings.find((b) => {
+      const bookingStart = String(b.start_time).slice(0, 5)
+      const bookingEnd = String(b.end_time).slice(0, 5)
+      return bookingStart < slotEnd && bookingEnd > slotStart
     })
 
     if (booking) {
@@ -826,15 +889,12 @@ export default function DashboardPage() {
         booked: true,
         end: slotEnd,
         name: booking.profiles?.full_name || "Pengguna",
-        start: booking.start_time.slice(0, 5),
-        finish: booking.end_time.slice(0, 5),
+        start: String(booking.start_time).slice(0, 5),
+        finish: String(booking.end_time).slice(0, 5),
       }
     }
 
-    return {
-      booked: false,
-      end: slotEnd,
-    }
+    return null
   }
 
   const renderBookingCard = (booking: any) => {
@@ -1621,7 +1681,7 @@ export default function DashboardPage() {
 
                       <div>
                         {status?.booked
-                          ? `Ditempah oleh ${status.name}`
+                          ? "Bertindih dengan tempahan sedia ada"
                           : "Tersedia (klik untuk tempah)"}
                       </div>
                     </div>
@@ -1658,6 +1718,10 @@ export default function DashboardPage() {
           <button type="submit" style={primaryButtonStyle} disabled={submittingBooking}>
             {submittingBooking ? "Menghantar..." : "Tempah Sekarang"}
           </button>
+
+          {message ? (
+            <p style={{ marginTop: 10, color: "#b91c1c", fontWeight: 600 }}>{message}</p>
+          ) : null}
           </form>
         </div>
       ) : null}

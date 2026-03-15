@@ -80,14 +80,14 @@ export default function AppHeader({
         <nav
           style={{
             display: "flex",
-            gap: 14,
+            gap: "8px 12px",
             flexWrap: "wrap",
             alignItems: "center",
           }}
         >
           <Link
             to="/dashboard"
-            style={{ textDecoration: "none", color: "#16325B", fontWeight: 600 }}
+            style={{ textDecoration: "none", color: "#16325B", fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}
           >
             Dashboard
           </Link>
@@ -96,21 +96,21 @@ export default function AppHeader({
             <>
               <Link
                 to="/admin/users"
-                style={{ textDecoration: "none", color: "#16325B", fontWeight: 600 }}
+                style={{ textDecoration: "none", color: "#16325B", fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}
               >
                 Pengguna
               </Link>
 
               <Link
                 to="/admin/rooms"
-                style={{ textDecoration: "none", color: "#16325B", fontWeight: 600 }}
+                style={{ textDecoration: "none", color: "#16325B", fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}
               >
                 Bilik
               </Link>
 
               <Link
                 to="/school/settings"
-                style={{ textDecoration: "none", color: "#16325B", fontWeight: 600 }}
+                style={{ textDecoration: "none", color: "#16325B", fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}
               >
                 Tetapan Sekolah
               </Link>
