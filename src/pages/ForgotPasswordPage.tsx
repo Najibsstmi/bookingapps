@@ -26,30 +26,55 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: "60px auto", padding: 24 }}>
-      <h1>Lupa Kata Laluan</h1>
-      <p>Masukkan email anda untuk reset kata laluan.</p>
+    <div
+      style={{
+        minHeight: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px 16px",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        <h1>Lupa Kata Laluan</h1>
+        <p>Masukkan email anda untuk reset kata laluan.</p>
 
-      <form onSubmit={handleReset} style={{ display: "grid", gap: 12 }}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ padding: 12, fontSize: 16 }}
-        />
+        <form onSubmit={handleReset} style={{ display: "grid", gap: 12 }}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={{ padding: "12px", fontSize: 16, borderRadius: 10, border: "1px solid #cbd5e1", width: "100%" }}
+          />
 
-        <button type="submit" disabled={loading} style={{ padding: 12, fontSize: 16 }}>
-          {loading ? "Sedang hantar..." : "Hantar Email Reset"}
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              minHeight: "44px",
+              borderRadius: "10px",
+              fontSize: "15px",
+              padding: "12px 16px",
+              background: "#16325B",
+              color: "#fff",
+              border: "none",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            {loading ? "Sedang hantar..." : "Hantar Email Reset"}
+          </button>
+        </form>
 
-      {message && <p style={{ marginTop: 16 }}>{message}</p>}
+        {message && <p style={{ marginTop: 16 }}>{message}</p>}
 
-      <p style={{ marginTop: 20 }}>
-        Kembali ke <Link to="/login">Log Masuk</Link>
-      </p>
+        <p style={{ marginTop: 20 }}>
+          Kembali ke <Link to="/login">Log Masuk</Link>
+        </p>
+      </div>
     </div>
   )
 }

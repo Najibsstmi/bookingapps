@@ -167,7 +167,8 @@ export default function RegisterPage() {
           .single()
 
         if (insertSchoolError || !insertedSchool) {
-          setMessage("Gagal mencipta rekod sekolah. Sila cuba lagi.")
+          console.error(insertSchoolError)
+          setMessage("Gagal mencipta rekod sekolah: " + insertSchoolError?.message)
           return
         }
 
@@ -232,8 +233,8 @@ export default function RegisterPage() {
 
   const cardStyle: React.CSSProperties = {
     maxWidth: 520,
-    margin: "40px auto",
-    padding: 24,
+    margin: "24px auto",
+    padding: 16,
     background: "#fff",
     borderRadius: 16,
     boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
@@ -374,11 +375,14 @@ export default function RegisterPage() {
           type="submit"
           disabled={loading || loadingSchools}
           style={{
+            width: "100%",
+            minHeight: "44px",
             padding: "12px 16px",
             background: "#16325B",
             color: "#fff",
             border: "none",
-            borderRadius: 10,
+            borderRadius: "10px",
+            fontSize: "15px",
             fontWeight: 700,
             cursor: "pointer",
             marginTop: 8,

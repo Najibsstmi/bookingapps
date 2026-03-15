@@ -28,7 +28,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: "60px auto", padding: 24 }}>
+    <div
+      style={{
+        minHeight: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px 16px",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 420 }}>
       <h1>Log Masuk</h1>
       <p>Sistem Tempahan Bilik Khas Sekolah</p>
 
@@ -39,7 +48,7 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          style={{ padding: 12, fontSize: 16 }}
+          style={{ padding: "12px", fontSize: 16, borderRadius: 10, border: "1px solid #cbd5e1", width: "100%" }}
         />
 
         <input
@@ -48,19 +57,30 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          style={{ padding: 12, fontSize: 16 }}
+          style={{ padding: "12px", fontSize: 16, borderRadius: 10, border: "1px solid #cbd5e1", width: "100%" }}
         />
 
         <button
           type="submit"
           disabled={loading}
-          style={{ padding: 12, fontSize: 16 }}
+          style={{
+            width: "100%",
+            minHeight: "44px",
+            borderRadius: "10px",
+            fontSize: "15px",
+            padding: "12px 16px",
+            background: "#16325B",
+            color: "#fff",
+            border: "none",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
         >
           {loading ? "Sedang log masuk..." : "Log Masuk"}
         </button>
       </form>
 
-      {message && <p style={{ marginTop: 16 }}>{message}</p>}
+      {message && <p style={{ marginTop: 16, color: "#dc2626" }}>{message}</p>}
 
       <p style={{ marginTop: 16 }}>
         <Link to="/forgot-password">Lupa kata laluan?</Link>
@@ -69,6 +89,7 @@ export default function LoginPage() {
       <p style={{ marginTop: 20 }}>
         Belum ada akaun? <Link to="/register">Daftar di sini</Link>
       </p>
+      </div>
     </div>
   )
 }
