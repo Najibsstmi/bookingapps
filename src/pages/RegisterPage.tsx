@@ -2,19 +2,30 @@ import { useEffect, useState, type FormEvent } from "react"
 import { Link } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 
-type School = {
-  id: string
-  school_name: string
-  school_code: string
-}
-
 export default function RegisterPage() {
   const [registerMode] = useState<"guru" | "admin">("guru")
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [schoolId, setSchoolId] = useState("")
-  const [schools, setSchools] = useState<School[]>([])
+  const [schoolType, setSchoolType] = useState("")
+  const [stateValue, setStateValue] = useState("")
+  const [district, setDistrict] = useState("")
+  const [selectedSchoolId, setSelectedSchoolId] = useState("")
+
+  const [schoolTypes, setSchoolTypes] = useState<string[]>([])
+  const [states, setStates] = useState<string[]>([])
+  const [districts, setDistricts] = useState<string[]>([])
+  const [schools, setSchools] = useState<
+    {
+      id: number
+      school_code: string
+      school_name: string
+      school_type: string
+      school_level: string
+      state: string
+      district: string
+    }[]
+  >([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
 
@@ -22,36 +33,75 @@ export default function RegisterPage() {
     const loadSchools = async () => {
       const { data, error } = await supabase
         .from("schools")
-        .select("id, school_name, school_code")
+        .select("id, school_code, school_name, school_type, school_level, state, district")
         .order("school_name", { ascending: true })
 
       if (error) {
         console.error("Ralat ambil schools:", error)
       } else {
-        setSchools(data || [])
+        const rows = (data ?? []) as typeof schools
+        setSchools(rows)
+
+        const typeOptions = [...new Set(rows.map((s) => s.school_type).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b))
+        const stateOptions = [...new Set(rows.map((s) => s.state).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b))
+
+        setSchoolTypes(typeOptions)
+        setStates(stateOptions)
       }
     }
 
     loadSchools()
   }, [])
 
+  useEffect(() => {
+    const districtOptions = [...new Set(
+      schools
+        .filter((s) => !stateValue || s.state === stateValue)
+        .map((s) => s.district)
+        .filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b))
+
+    setDistricts(districtOptions)
+
+    if (district && !districtOptions.includes(district)) {
+      setDistrict("")
+    }
+  }, [schools, stateValue, district])
+
+  const filteredSchools = schools.filter((school) => {
+    if (schoolType && school.school_type !== schoolType) return false
+    if (stateValue && school.state !== stateValue) return false
+    if (district && school.district !== district) return false
+    return true
+  })
+
+  useEffect(() => {
+    if (
+      selectedSchoolId &&
+      !filteredSchools.some((school) => String(school.id) === selectedSchoolId)
+    ) {
+      setSelectedSchoolId("")
+    }
+  }, [selectedSchoolId, filteredSchools])
+
   const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setMessage("")
 
-    if (!schoolId) {
+    if (!selectedSchoolId) {
       setMessage("Sila pilih sekolah.")
       setLoading(false)
       return
     }
 
-    const selectedSchool = schools.find((school) => school.id === schoolId)
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      schoolId
+    const selectedSchool = schools.find(
+      (school) => String(school.id) === selectedSchoolId
     )
 
-    if (!selectedSchool || !isUuid) {
+    if (!selectedSchool) {
       setMessage("Sekolah tidak sah. Sila pilih sekolah daripada senarai.")
       setLoading(false)
       return
@@ -63,7 +113,7 @@ export default function RegisterPage() {
       options: {
         data: {
           full_name: fullName,
-          school_id: registerMode === "guru" ? schoolId : "",
+          school_id: registerMode === "guru" ? selectedSchoolId : "",
           role: registerMode === "admin" ? "admin" : "guru",
         },
       },
@@ -114,14 +164,54 @@ export default function RegisterPage() {
         />
 
         <select
-          value={schoolId}
-          onChange={(e) => setSchoolId(e.target.value)}
+          value={schoolType}
+          onChange={(e) => setSchoolType(e.target.value)}
+          style={{ padding: 12, fontSize: 16 }}
+        >
+          <option value="">-- Jenis sekolah --</option>
+          {schoolTypes.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={stateValue}
+          onChange={(e) => setStateValue(e.target.value)}
+          style={{ padding: 12, fontSize: 16 }}
+        >
+          <option value="">-- Negeri --</option>
+          {states.map((stateItem) => (
+            <option key={stateItem} value={stateItem}>
+              {stateItem}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={district}
+          onChange={(e) => setDistrict(e.target.value)}
+          disabled={!stateValue}
+          style={{ padding: 12, fontSize: 16 }}
+        >
+          <option value="">-- Daerah --</option>
+          {districts.map((districtItem) => (
+            <option key={districtItem} value={districtItem}>
+              {districtItem}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={selectedSchoolId}
+          onChange={(e) => setSelectedSchoolId(e.target.value)}
           required
           style={{ padding: 12, fontSize: 16 }}
         >
           <option value="">-- Pilih sekolah --</option>
-          {schools.map((school) => (
-            <option key={school.id} value={school.id}>
+          {filteredSchools.map((school) => (
+            <option key={String(school.id)} value={String(school.id)}>
               {school.school_name} ({school.school_code})
             </option>
           ))}
