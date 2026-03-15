@@ -31,11 +31,6 @@ type BookingForSlot = {
   } | null
 }
 
-type Slot = {
-  start: string
-  end: string
-}
-
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -460,35 +455,42 @@ export default function DashboardPage() {
     setRoomId("")
   }, [selectedCategory])
 
-  useEffect(() => {
-    if (!roomId || !bookingDate) {
+  async function loadRoomBookings(selectedRoomId?: string, selectedBookingDate?: string) {
+    const roomIdToUse = selectedRoomId ?? roomId
+    const bookingDateToUse = selectedBookingDate ?? bookingDate
+
+    if (!roomIdToUse || !bookingDateToUse) {
       setRoomBookings([])
       return
     }
 
-    const loadRoomBookings = async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(`
-          start_time,
-          end_time,
-          status,
-          booking_date,
-          profiles (
-            full_name
-          )
-        `)
-        .eq("room_id", roomId)
-        .eq("booking_date", bookingDate)
-        .order("start_time", { ascending: true })
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(`
+        start_time,
+        end_time,
+        status,
+        booking_date,
+        profiles (
+          full_name
+        )
+      `)
+      .eq("room_id", roomIdToUse)
+      .eq("booking_date", bookingDateToUse)
+      .in("status", ["pending", "approved"])
+      .order("start_time", { ascending: true })
 
-      if (!error) {
-        setRoomBookings((data ?? []) as BookingForSlot[])
-      }
+    if (error) {
+      console.error("Ralat load room bookings:", error)
+      return
     }
 
+    setRoomBookings((data ?? []) as BookingForSlot[])
+  }
+
+  useEffect(() => {
     loadRoomBookings()
-  }, [roomId, bookingDate])
+  }, [roomId, bookingDate, bookings])
 
   useEffect(() => {
     loadStats()
@@ -599,6 +601,7 @@ export default function DashboardPage() {
 
     if (profile?.school_id) {
       await loadBookings(profile.school_id, profile.id, profile.role)
+      await loadRoomBookings(booking.room_id, booking.booking_date)
     }
     if (currentUser?.id) {
       await loadNotifications(currentUser.id)
@@ -644,6 +647,7 @@ export default function DashboardPage() {
     await notifyBookingCancelled(booking, trimmedReason)
     if (profile?.school_id) {
       await loadBookings(profile.school_id, profile.id, profile.role)
+      await loadRoomBookings(booking.room_id, booking.booking_date)
     }
     if (currentUser?.id) {
       await loadNotifications(currentUser.id)
@@ -778,6 +782,7 @@ export default function DashboardPage() {
 
       await loadBookings(schoolId, currentUser.id, profile.role)
       await loadNotifications(currentUser.id)
+      await loadRoomBookings(selectedRoomId, bookingDate)
     } finally {
       setSubmittingBooking(false)
     }
@@ -846,55 +851,36 @@ export default function DashboardPage() {
     fontWeight: 700,
   }
 
-  function isSlotAvailable(slot: Slot, slotBookings: BookingForSlot[]) {
-    const activeBookings = slotBookings.filter(
-      (booking) => booking.status !== "dibatalkan" && booking.status !== "cancelled"
-    )
-
-    const hasOverlap = activeBookings.some((booking) => {
-      const bookingStart = String(booking.start_time).slice(0, 5)
-      const bookingEnd = String(booking.end_time).slice(0, 5)
-      const slotStart = slot.start
-      const slotEnd = slot.end
-      return bookingStart < slotEnd && bookingEnd > slotStart
-    })
-
-    return !hasOverlap
-  }
-
   function isSlotBooked(slotStart: string) {
     const slotIndex = timeSlots.indexOf(slotStart)
     const slotEnd = timeSlots[slotIndex + 1]
 
     if (!slotEnd) return null
 
-    const slot: Slot = { start: slotStart, end: slotEnd }
-    const available = isSlotAvailable(slot, roomBookings)
+    const overlappingBooking = roomBookings.find((booking) => {
+      const status = String(booking.status || "").toLowerCase()
+      if (!["pending", "approved"].includes(status)) return false
 
-    if (available) {
+      const bookingStart = String(booking.start_time).slice(0, 5)
+      const bookingEnd = String(booking.end_time).slice(0, 5)
+
+      return bookingStart < slotEnd && bookingEnd > slotStart
+    })
+
+    if (!overlappingBooking) {
       return {
         booked: false,
         end: slotEnd,
       }
     }
 
-    const booking = roomBookings.find((b) => {
-      const bookingStart = String(b.start_time).slice(0, 5)
-      const bookingEnd = String(b.end_time).slice(0, 5)
-      return bookingStart < slotEnd && bookingEnd > slotStart
-    })
-
-    if (booking) {
-      return {
-        booked: true,
-        end: slotEnd,
-        name: booking.profiles?.full_name || "Pengguna",
-        start: String(booking.start_time).slice(0, 5),
-        finish: String(booking.end_time).slice(0, 5),
-      }
+    return {
+      booked: true,
+      end: slotEnd,
+      name: overlappingBooking.profiles?.full_name || "Pengguna",
+      start: String(overlappingBooking.start_time).slice(0, 5),
+      finish: String(overlappingBooking.end_time).slice(0, 5),
     }
-
-    return null
   }
 
   const renderBookingCard = (booking: any) => {
