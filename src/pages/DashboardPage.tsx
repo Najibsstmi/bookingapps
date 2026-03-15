@@ -60,6 +60,11 @@ export default function DashboardPage() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [schoolLogoUrl, setSchoolLogoUrl] = useState("")
   const [schoolName, setSchoolName] = useState("")
+  const [openSessions, setOpenSessions] = useState({
+    pagi: true,
+    petang: false,
+    malam: false,
+  })
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -431,24 +436,33 @@ export default function DashboardPage() {
         .sort((a, b) => a.room_name.localeCompare(b.room_name))
     : []
 
-  const timeSlots = [
-    "07:00",
-    "08:00",
-    "09:00",
-    "10:00",
-    "11:00",
-    "12:00",
-    "13:00",
-    "14:00",
-    "15:00",
-    "16:00",
-    "17:00",
-    "18:00",
-    "19:00",
-    "20:00",
-    "21:00",
-    "22:00",
-    "23:00",
+  const SESSION_GROUPS = [
+    { key: "pagi", label: "Sesi Pagi", start: "07:00", end: "12:30" },
+    { key: "petang", label: "Sesi Petang", start: "12:30", end: "17:00" },
+    { key: "malam", label: "Sesi Malam", start: "17:00", end: "23:00" },
+  ]
+
+  function generateHalfHourSlots(start: string, end: string) {
+    const slots: string[] = []
+    const [startHour, startMinute] = start.split(":").map(Number)
+    const [endHour, endMinute] = end.split(":").map(Number)
+    let currentMinutes = startHour * 60 + startMinute
+    const endMinutes = endHour * 60 + endMinute
+    while (currentMinutes <= endMinutes) {
+      const hour = Math.floor(currentMinutes / 60)
+      const minute = currentMinutes % 60
+      slots.push(
+        `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
+      )
+      currentMinutes += 30
+    }
+    return slots
+  }
+
+  const allTimeSlots = [
+    ...generateHalfHourSlots("07:00", "12:30").slice(0, -1),
+    ...generateHalfHourSlots("12:30", "17:00").slice(0, -1),
+    ...generateHalfHourSlots("17:00", "23:00"),
   ]
 
   useEffect(() => {
@@ -852,8 +866,8 @@ export default function DashboardPage() {
   }
 
   function isSlotBooked(slotStart: string) {
-    const slotIndex = timeSlots.indexOf(slotStart)
-    const slotEnd = timeSlots[slotIndex + 1]
+    const slotIndex = allTimeSlots.indexOf(slotStart)
+    const slotEnd = allTimeSlots[slotIndex + 1]
 
     if (!slotEnd) return null
 
@@ -1086,8 +1100,8 @@ export default function DashboardPage() {
 
     // semak slot berturutan
     for (let i = 0; i < updatedSlots.length - 1; i++) {
-      const currentIndex = timeSlots.indexOf(updatedSlots[i])
-      const nextIndex = timeSlots.indexOf(updatedSlots[i + 1])
+      const currentIndex = allTimeSlots.indexOf(updatedSlots[i])
+      const nextIndex = allTimeSlots.indexOf(updatedSlots[i + 1])
 
       if (nextIndex !== currentIndex + 1) {
         alert("Slot yang dipilih mesti berturutan.")
@@ -1101,10 +1115,10 @@ export default function DashboardPage() {
       const firstSlot = updatedSlots[0]
       const lastSlot = updatedSlots[updatedSlots.length - 1]
 
-      const lastIndex = timeSlots.indexOf(lastSlot)
+      const lastIndex = allTimeSlots.indexOf(lastSlot)
 
       setStartTime(firstSlot)
-      setEndTime(timeSlots[lastIndex + 1])
+      setEndTime(allTimeSlots[lastIndex + 1])
     } else {
       setStartTime("")
       setEndTime("")
@@ -1632,44 +1646,80 @@ export default function DashboardPage() {
               <h3 style={{ marginTop: 0 }}>Jadual Slot Bilik</h3>
 
               <div style={{ display: "grid", gap: 10 }}>
-                {timeSlots.slice(0, -1).map((slot) => {
-                  const status = isSlotBooked(slot)
+                {SESSION_GROUPS.map((session) => {
+                  const sessionSlots = generateHalfHourSlots(session.start, session.end).slice(0, -1)
 
                   return (
-                    <div
-                      key={slot}
-                      onClick={() => handleSlotClick(slot, status?.end || "", Boolean(status?.booked))}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "10px 12px",
-                        borderRadius: 10,
-                        background: status?.booked
-                          ? "#fee2e2"
-                          : selectedSlots.includes(slot)
-                          ? "#dbeafe"
-                          : "#dcfce7",
-                        border: status?.booked
-                          ? "1px solid #fecaca"
-                          : selectedSlots.includes(slot)
-                          ? "1px solid #60a5fa"
-                          : "1px solid #bbf7d0",
-                        cursor: status?.booked ? "not-allowed" : "pointer",
-                        opacity: status?.booked ? 0.7 : 1,
-                      }}
-                    >
-                      <div>
-                        <strong>
-                          {slot} - {status?.end}
-                        </strong>
-                      </div>
+                    <div key={session.key} style={{ marginBottom: 16 }}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenSessions((prev) => ({
+                            ...prev,
+                            [session.key]: !prev[session.key as keyof typeof prev],
+                          }))
+                        }
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "12px 14px",
+                          borderRadius: 12,
+                          border: "1px solid #cbd5e1",
+                          background: "#f8fafc",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          marginBottom: 10,
+                        }}
+                      >
+                        {session.label} ({session.start} - {session.end}){" "}
+                        <span style={{ float: "right" }}>
+                          {openSessions[session.key as keyof typeof openSessions] ? "▲" : "▼"}
+                        </span>
+                      </button>
 
-                      <div>
-                        {status?.booked
-                          ? "Bertindih dengan tempahan sedia ada"
-                          : "Tersedia (klik untuk tempah)"}
-                      </div>
+                      {openSessions[session.key as keyof typeof openSessions] && (
+                        <div style={{ display: "grid", gap: 10 }}>
+                          {sessionSlots.map((slot) => {
+                            const status = isSlotBooked(slot)
+
+                            return (
+                              <button
+                                key={`${session.key}-${slot}`}
+                                type="button"
+                                onClick={() =>
+                                  handleSlotClick(slot, status?.end || "", Boolean(status?.booked))
+                                }
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  padding: "10px 12px",
+                                  borderRadius: 10,
+                                  background: status?.booked
+                                    ? "#fee2e2"
+                                    : selectedSlots.includes(slot)
+                                    ? "#dbeafe"
+                                    : "#dcfce7",
+                                  border: status?.booked
+                                    ? "1px solid #fecaca"
+                                    : selectedSlots.includes(slot)
+                                    ? "1px solid #60a5fa"
+                                    : "1px solid #bbf7d0",
+                                  cursor: status?.booked ? "not-allowed" : "pointer",
+                                  opacity: status?.booked ? 0.85 : 1,
+                                }}
+                              >
+                                <span>
+                                  {slot} - {status?.end}
+                                </span>
+                                <span>
+                                  {status?.booked ? "Tidak tersedia" : "Tersedia"}
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
