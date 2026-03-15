@@ -1093,7 +1093,9 @@ export default function DashboardPage() {
       updatedSlots.push(start)
     }
 
-    updatedSlots.sort((a, b) => allTimeSlots.indexOf(a) - allTimeSlots.indexOf(b))
+    updatedSlots.sort(
+      (a, b) => allTimeSlots.indexOf(a) - allTimeSlots.indexOf(b)
+    )
 
     for (let i = 0; i < updatedSlots.length - 1; i++) {
       const currentIndex = allTimeSlots.indexOf(updatedSlots[i])
@@ -1110,7 +1112,6 @@ export default function DashboardPage() {
     if (updatedSlots.length > 0) {
       const firstSlot = updatedSlots[0]
       const lastSlot = updatedSlots[updatedSlots.length - 1]
-
       const lastIndex = allTimeSlots.indexOf(lastSlot)
 
       setStartTime(firstSlot)
