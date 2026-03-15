@@ -866,14 +866,20 @@ export default function DashboardPage() {
     const slotIndex = allTimeSlots.indexOf(slotStart)
     const slotEnd = allTimeSlots[slotIndex + 1]
 
-    if (!slotEnd) return null
+    if (!slotEnd || !roomId || !bookingDate) return null
 
-    const overlappingBooking = roomBookings.find((booking) => {
+    const relevantBookings = bookings.filter((booking: any) => {
+      const status = String(booking.status || "").toLowerCase()
+      return (
+        booking.room_id === roomId &&
+        booking.booking_date === bookingDate &&
+        ["pending", "approved"].includes(status)
+      )
+    })
+
+    const overlappingBooking = relevantBookings.find((booking: any) => {
       const bookingStart = String(booking.start_time).slice(0, 5)
       const bookingEnd = String(booking.end_time).slice(0, 5)
-      const bookingStatus = String(booking.status || "").toLowerCase()
-
-      if (!["pending", "approved"].includes(bookingStatus)) return false
 
       return bookingStart < slotEnd && bookingEnd > slotStart
     })
@@ -888,7 +894,7 @@ export default function DashboardPage() {
     return {
       booked: true,
       end: slotEnd,
-      name: overlappingBooking.profiles?.full_name || "Pengguna",
+      name: overlappingBooking.teacher_name || "Pengguna",
       start: String(overlappingBooking.start_time).slice(0, 5),
       finish: String(overlappingBooking.end_time).slice(0, 5),
     }
