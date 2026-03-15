@@ -871,6 +871,9 @@ export default function DashboardPage() {
     const overlappingBooking = roomBookings.find((booking) => {
       const bookingStart = String(booking.start_time).slice(0, 5)
       const bookingEnd = String(booking.end_time).slice(0, 5)
+      const bookingStatus = String(booking.status || "").toLowerCase()
+
+      if (!["pending", "approved"].includes(bookingStatus)) return false
 
       return bookingStart < slotEnd && bookingEnd > slotStart
     })
@@ -1090,9 +1093,8 @@ export default function DashboardPage() {
       updatedSlots.push(start)
     }
 
-    updatedSlots.sort()
+    updatedSlots.sort((a, b) => allTimeSlots.indexOf(a) - allTimeSlots.indexOf(b))
 
-    // semak slot berturutan
     for (let i = 0; i < updatedSlots.length - 1; i++) {
       const currentIndex = allTimeSlots.indexOf(updatedSlots[i])
       const nextIndex = allTimeSlots.indexOf(updatedSlots[i + 1])
@@ -1112,7 +1114,7 @@ export default function DashboardPage() {
       const lastIndex = allTimeSlots.indexOf(lastSlot)
 
       setStartTime(firstSlot)
-      setEndTime(allTimeSlots[lastIndex + 1])
+      setEndTime(allTimeSlots[lastIndex + 1] || "")
     } else {
       setStartTime("")
       setEndTime("")
@@ -1640,6 +1642,7 @@ export default function DashboardPage() {
               <h3 style={{ marginTop: 0 }}>Jadual Slot Bilik</h3>
 
               <div style={{ display: "grid", gap: 10 }}>
+                {(() => { console.log("roomBookings semasa render:", roomBookings); return null })()}
                 {SESSION_GROUPS.map((session) => {
                   const sessionSlots = session.slots
 
