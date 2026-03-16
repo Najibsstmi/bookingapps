@@ -39,7 +39,7 @@ export default function LoginPage() {
     >
       <div style={{ width: "100%", maxWidth: 420 }}>
       <img
-        src="/eduslot-logo.png"
+        src="/logoutama.png"
         alt="Logo EduSlot"
         style={{
           width: 120,
@@ -49,8 +49,18 @@ export default function LoginPage() {
           margin: "0 auto 12px",
         }}
       />
-      <h1>Log Masuk</h1>
-      <h1 style={{ marginTop: 0 }}>EduSlot</h1>
+      <h1 style={{ marginBottom: 4 }}>Log Masuk</h1>
+      <div
+        style={{
+          fontSize: "clamp(30px, 7vw, 44px)",
+          lineHeight: 1,
+          fontWeight: 900,
+          color: "#16325B",
+          marginBottom: 10,
+        }}
+      >
+        EduSlot
+      </div>
       <p>Sistem Tempahan Bilik Khas Sekolah</p>
 
       <form onSubmit={handleLogin} style={{ display: "grid", gap: 12 }}>

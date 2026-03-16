@@ -259,7 +259,7 @@ export default function RegisterPage() {
   return (
     <div style={cardStyle}>
       <img
-        src="/eduslot-logo.png"
+        src="/logoutama.png"
         alt="Logo EduSlot"
         style={{
           width: 120,
