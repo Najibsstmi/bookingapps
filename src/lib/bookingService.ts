@@ -38,6 +38,7 @@ export async function createBooking(input: CreateBookingInput) {
     start_time: input.startTime,
     end_time: input.endTime,
     purpose: input.purpose || null,
+    status: "pending",
   })
 
   if (error) throw error
