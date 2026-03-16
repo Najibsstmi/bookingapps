@@ -258,6 +258,17 @@ export default function RegisterPage() {
 
   return (
     <div style={cardStyle}>
+      <img
+        src="/eduslot-logo.png"
+        alt="Logo EduSlot"
+        style={{
+          width: 120,
+          height: 120,
+          objectFit: "contain",
+          display: "block",
+          margin: "0 auto 12px",
+        }}
+      />
       <h1 style={{ marginTop: 0 }}>Daftar Akaun</h1>
       <p style={{ color: "#475569" }}>Sistem Tempahan Bilik Khas Sekolah</p>
 
