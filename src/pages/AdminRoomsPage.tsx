@@ -166,11 +166,27 @@ export default function AdminRoomsPage() {
 
   if (profile.role !== "admin" && profile.role !== "pengetua") {
     return (
-      <div style={{ maxWidth: 900, margin: "40px auto", padding: 24 }}>
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 980,
+          margin: "0 auto",
+          padding: "16px",
+          boxSizing: "border-box",
+        }}
+      >
         <p>Anda tiada akses ke halaman ini.</p>
         <Link to="/dashboard">← Kembali ke Dashboard</Link>
       </div>
     )
+  }
+
+  const pageWrapperStyle: React.CSSProperties = {
+    width: "100%",
+    maxWidth: 980,
+    margin: "0 auto",
+    padding: "16px",
+    boxSizing: "border-box",
   }
 
   const cardStyle: React.CSSProperties = {
@@ -205,6 +221,11 @@ export default function AdminRoomsPage() {
     cursor: "pointer",
   }
 
+  const formWrapStyle: React.CSSProperties = {
+    width: "100%",
+    maxWidth: 720,
+  }
+
   const thStyle: React.CSSProperties = {
     textAlign: "left",
     padding: "12px",
@@ -219,15 +240,7 @@ export default function AdminRoomsPage() {
   }
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "100%",
-        padding: "12px",
-        boxSizing: "border-box",
-        overflowX: "hidden",
-      }}
-    >
+    <div style={pageWrapperStyle}>
       <AppHeader
         schoolName={schoolName}
         schoolLogoUrl={schoolLogoUrl}
@@ -265,30 +278,32 @@ export default function AdminRoomsPage() {
       <div style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Tambah Bilik</h2>
         <form onSubmit={handleAddRoom}>
-          <input
-            type="text"
-            placeholder="Nama bilik"
-            value={newRoomName}
-            onChange={(e) => setNewRoomName(e.target.value)}
-            style={fieldStyle}
-          />
-          <input
-            type="text"
-            placeholder="Kategori bilik"
-            value={newRoomCategory}
-            onChange={(e) => setNewRoomCategory(e.target.value)}
-            style={fieldStyle}
-          />
-          <input
-            type="number"
-            placeholder="Kapasiti"
-            value={newRoomCapacity}
-            onChange={(e) => setNewRoomCapacity(e.target.value)}
-            style={fieldStyle}
-          />
-          <button type="submit" style={buttonStyle}>
-            Tambah Bilik
-          </button>
+          <div style={formWrapStyle}>
+            <input
+              type="text"
+              placeholder="Nama bilik"
+              value={newRoomName}
+              onChange={(e) => setNewRoomName(e.target.value)}
+              style={fieldStyle}
+            />
+            <input
+              type="text"
+              placeholder="Kategori bilik"
+              value={newRoomCategory}
+              onChange={(e) => setNewRoomCategory(e.target.value)}
+              style={fieldStyle}
+            />
+            <input
+              type="number"
+              placeholder="Kapasiti"
+              value={newRoomCapacity}
+              onChange={(e) => setNewRoomCapacity(e.target.value)}
+              style={fieldStyle}
+            />
+            <button type="submit" style={buttonStyle}>
+              Tambah Bilik
+            </button>
+          </div>
         </form>
       </div>
 

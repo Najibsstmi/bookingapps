@@ -8,7 +8,6 @@ type AppHeaderProps = {
 
 export default function AppHeader({
   schoolName,
-  schoolLogoUrl,
   role,
 }: AppHeaderProps) {
   return (
@@ -42,21 +41,19 @@ export default function AppHeader({
             minWidth: 0,
           }}
         >
-          {schoolLogoUrl ? (
-            <img
-              src={schoolLogoUrl}
-              alt="Logo sekolah"
-              style={{
-                width: 48,
-                height: 48,
-                objectFit: "contain",
-                borderRadius: 10,
-                background: "#fff",
-                padding: 4,
-                border: "1px solid #e2e8f0",
-              }}
-            />
-          ) : null}
+          <img
+            src="/app-logo.svg"
+            alt="Logo aplikasi"
+            style={{
+              width: 48,
+              height: 48,
+              objectFit: "contain",
+              borderRadius: 10,
+              background: "#fff",
+              padding: 4,
+              border: "1px solid #e2e8f0",
+            }}
+          />
 
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 18, color: "#16325B" }}>
@@ -87,8 +84,34 @@ export default function AppHeader({
         >
           <Link
             to="/dashboard"
-            style={{ textDecoration: "none", color: "#16325B", fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}
+            style={{
+              textDecoration: "none",
+              color: "#16325B",
+              fontWeight: 600,
+              fontSize: "13px",
+              whiteSpace: "nowrap",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
           >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="8" height="8" rx="1.5" />
+              <rect x="13" y="3" width="8" height="5" rx="1.5" />
+              <rect x="13" y="10" width="8" height="11" rx="1.5" />
+              <rect x="3" y="13" width="8" height="8" rx="1.5" />
+            </svg>
             Dashboard
           </Link>
 
@@ -96,15 +119,68 @@ export default function AppHeader({
             <>
               <Link
                 to="/admin/users"
-                style={{ textDecoration: "none", color: "#16325B", fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}
+                style={{
+                  textDecoration: "none",
+                  color: "#16325B",
+                  fontWeight: 600,
+                  fontSize: "13px",
+                  whiteSpace: "nowrap",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
               >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="8.5" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
                 Pengguna
               </Link>
 
               <Link
                 to="/admin/rooms"
-                style={{ textDecoration: "none", color: "#16325B", fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}
+                style={{
+                  textDecoration: "none",
+                  color: "#16325B",
+                  fontWeight: 600,
+                  fontSize: "13px",
+                  whiteSpace: "nowrap",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
               >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M9 3h6" />
+                  <path d="M9 3a2 2 0 0 0-2 2v1h10V5a2 2 0 0 0-2-2" />
+                  <rect x="5" y="6" width="14" height="15" rx="2" />
+                  <path d="M9 11h6" />
+                  <path d="M9 15h6" />
+                </svg>
                 Bilik
               </Link>
 

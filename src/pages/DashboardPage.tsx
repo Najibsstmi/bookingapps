@@ -1182,8 +1182,8 @@ export default function DashboardPage() {
               src={schoolLogoUrl}
               alt="Logo sekolah"
               style={{
-                width: 72,
-                height: 72,
+                width: 88,
+                height: 88,
                 objectFit: "contain",
                 borderRadius: 12,
                 background: "#fff",

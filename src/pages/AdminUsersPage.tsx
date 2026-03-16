@@ -156,12 +156,30 @@ export default function AdminUsersPage() {
     }
   }
 
+  const pageWrapperStyle: React.CSSProperties = {
+    width: "100%",
+    maxWidth: 980,
+    margin: "0 auto",
+    padding: "16px",
+    boxSizing: "border-box",
+  }
+
+  const cardStyle: React.CSSProperties = {
+    background: "#fff",
+    borderRadius: 16,
+    padding: "16px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+    marginBottom: 16,
+    width: "100%",
+    boxSizing: "border-box",
+  }
+
   if (loading) {
     return <div style={{ padding: 24 }}>Loading...</div>
   }
 
   return (
-    <div style={{ maxWidth: 1000, margin: "40px auto", padding: 24 }}>
+    <div style={pageWrapperStyle}>
       <AppHeader
         schoolName={schoolName}
         schoolLogoUrl={schoolLogoUrl}
@@ -181,25 +199,27 @@ export default function AdminUsersPage() {
         ← Kembali ke Dashboard
       </Link>
 
-      <h1>Senarai Pengguna Sekolah</h1>
-      <p>Admin boleh semak pengguna yang masih menunggu kelulusan.</p>
-      <button
-  onClick={handleLogout}
-  style={{
-    marginTop: 10,
-    marginBottom: 20,
-    padding: "10px 16px",
-    fontSize: 16,
-    cursor: "pointer"
-  }}
->
-  Log Keluar
-</button>
+      <div style={cardStyle}>
+        <h1 style={{ marginTop: 0 }}>Senarai Pengguna Sekolah</h1>
+        <p>Admin boleh semak pengguna yang masih menunggu kelulusan.</p>
+        <button
+          onClick={handleLogout}
+          style={{
+            marginTop: 10,
+            padding: "10px 16px",
+            fontSize: 16,
+            cursor: "pointer",
+          }}
+        >
+          Log Keluar
+        </button>
+      </div>
 
-      {message && <p style={{ marginTop: 16 }}>{message}</p>}
+      <div style={cardStyle}>
+        {message && <p style={{ marginTop: 0, marginBottom: 0 }}>{message}</p>}
 
-      {!message && (
-        <>
+        {!message && (
+          <>
           <p style={{ marginTop: 10, marginBottom: 8, fontSize: "12px", color: "#6b7280" }}>
             Slide ke kanan untuk lihat semua maklumat →
           </p>
@@ -265,7 +285,8 @@ export default function AdminUsersPage() {
             </table>
           </div>
         </>
-      )}
+        )}
+      </div>
     </div>
   )
 }
