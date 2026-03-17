@@ -880,7 +880,7 @@ export default function DashboardPage() {
   const renderBookingCard = (booking: any) => {
     const statusLabel =
       booking.status === "approved"
-        ? "Diluluskan"
+        ? "Telah Diluluskan"
         : booking.status === "cancelled"
         ? "Dibatalkan"
         : "Menunggu Kelulusan"
@@ -941,9 +941,9 @@ export default function DashboardPage() {
               background: badgeBg,
               color: statusColor,
               fontWeight: 700,
-              fontSize: 12,
-              padding: "6px 10px",
-              borderRadius: 999,
+              fontSize: 14,
+              padding: "10px 16px",
+              borderRadius: 10,
               whiteSpace: "nowrap",
             }}
           >
