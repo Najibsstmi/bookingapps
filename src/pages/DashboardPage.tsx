@@ -540,6 +540,32 @@ export default function DashboardPage() {
     }
   }
 
+  const rejectUser = async (userId: string) => {
+    const confirmed = window.confirm("Tolak permohonan pengguna ini?")
+    if (!confirmed) return
+
+    const schoolId = profile?.school_id
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        approval_status: "rejected",
+      })
+      .eq("id", userId)
+
+    if (error) {
+      console.error("Gagal menolak pengguna:", error)
+      alert("Gagal menolak pengguna.")
+      return
+    }
+
+    alert("Permohonan pengguna berjaya ditolak.")
+
+    if (schoolId) {
+      await loadPendingUsers(schoolId)
+    }
+  }
+
   async function approveBooking(booking: any) {
     const confirmApprove = confirm("Luluskan tempahan ini?")
 
@@ -1388,7 +1414,7 @@ export default function DashboardPage() {
                     </select>
                   </div>
 
-                  <div style={{ marginTop: 4 }}>
+                  <div style={{ marginTop: 4, display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <button
                       type="button"
                       onClick={() => approveUser(user.id)}
@@ -1398,6 +1424,17 @@ export default function DashboardPage() {
                       }}
                     >
                       Luluskan Pengguna
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => rejectUser(user.id)}
+                      style={{
+                        ...primaryButtonStyle,
+                        background: "#b91c1c",
+                      }}
+                    >
+                      Tolak Pengguna
                     </button>
                   </div>
                 </div>
