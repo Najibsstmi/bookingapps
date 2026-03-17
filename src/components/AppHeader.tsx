@@ -85,6 +85,29 @@ export default function AppHeader({
       {(role === "admin" || role === "pengetua") && (
         <>
           <Link
+            to="/analysis"
+            onClick={onNavigate}
+            style={navLinkStyle}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 3v18h18" />
+              <path d="M7 14l4-4 3 3 4-6" />
+            </svg>
+            Analisis
+          </Link>
+
+          <Link
             to="/admin/users"
             onClick={onNavigate}
             style={navLinkStyle}

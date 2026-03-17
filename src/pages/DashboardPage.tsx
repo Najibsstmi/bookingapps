@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
 import AppHeader from "../components/AppHeader"
 import { supabase } from "../lib/supabase"
 import { seedDefaultRooms } from "../lib/roomService"
@@ -38,11 +37,6 @@ export default function DashboardPage() {
   const [bookings, setBookings] = useState<any[]>([])
   const [roomBookings, setRoomBookings] = useState<BookingForSlot[]>([])
   const [selectedSlots, setSelectedSlots] = useState<string[]>([])
-  const [stats, setStats] = useState({
-    totalRooms: 0,
-    upcomingBookings: 0,
-    topRoom: "",
-  })
   const [notifications, setNotifications] = useState<any[]>([])
   const [pendingUsers, setPendingUsers] = useState<any[]>([])
   const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({})
@@ -353,45 +347,6 @@ export default function DashboardPage() {
     })
   }
 
-  async function loadStats(currentSchoolId?: string) {
-    const schoolIdToUse = currentSchoolId || profile?.school_id
-
-    if (!schoolIdToUse) return
-
-    const today = new Date().toISOString().split("T")[0]
-
-    const activeRooms = rooms.filter((room: any) => room.is_active !== false)
-
-    const upcoming = bookings.filter(
-      (booking: any) => booking.booking_date >= today
-    )
-
-    const roomCountMap: Record<string, number> = {}
-
-    bookings.forEach((booking: any) => {
-      const roomName = booking.rooms?.room_name
-      if (!roomName) return
-
-      roomCountMap[roomName] = (roomCountMap[roomName] || 0) + 1
-    })
-
-    let topRoom = ""
-    let maxCount = 0
-
-    Object.entries(roomCountMap).forEach(([roomName, count]) => {
-      if (count > maxCount) {
-        maxCount = count
-        topRoom = `${roomName} (${count})`
-      }
-    })
-
-    setStats({
-      totalRooms: activeRooms.length,
-      upcomingBookings: upcoming.length,
-      topRoom: topRoom || "Belum ada data",
-    })
-  }
-
   useEffect(() => {
     async function initSchoolData() {
       if (!profile?.school_id) {
@@ -502,10 +457,6 @@ export default function DashboardPage() {
   useEffect(() => {
     loadRoomBookings()
   }, [roomId, bookingDate, bookings])
-
-  useEffect(() => {
-    loadStats()
-  }, [rooms, bookings])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -1306,55 +1257,6 @@ export default function DashboardPage() {
       </section>
 
       {isAdmin ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: 16,
-              padding: 20,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-            }}
-          >
-            <p style={{ margin: 0, color: "#666" }}>Jumlah Bilik Aktif</p>
-            <h2 style={{ margin: "8px 0 0 0" }}>{stats.totalRooms}</h2>
-          </div>
-
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: 16,
-              padding: 20,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-            }}
-          >
-            <p style={{ margin: 0, color: "#666" }}>Tempahan Akan Datang</p>
-            <h2 style={{ margin: "8px 0 0 0" }}>{stats.upcomingBookings}</h2>
-          </div>
-
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: 16,
-              padding: 20,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-            }}
-          >
-            <p style={{ margin: 0, color: "#666" }}>Bilik Paling Digunakan</p>
-            <h2 style={{ margin: "8px 0 0 0", fontSize: 20 }}>
-              {stats.topRoom}
-            </h2>
-          </div>
-        </div>
-      ) : null}
-
-      {isAdmin ? (
         <div style={cardStyle}>
           <h2 style={{ marginTop: 0 }}>Pengguna Menunggu Kelulusan</h2>
 
@@ -1443,156 +1345,6 @@ export default function DashboardPage() {
           )}
         </div>
       ) : null}
-
-      {(profile?.role === "admin" || profile?.role === "pengetua") && (
-        <section
-          style={{
-            background: "#fff",
-            borderRadius: 16,
-            padding: 24,
-            marginTop: 24,
-            boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Pengurusan Pengguna</h2>
-          <p style={{ marginBottom: 16 }}>
-            Lihat semua pengguna sekolah dan tukar peranan mereka.
-          </p>
-
-          <Link
-            to="/admin/users"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              background: "#16325B",
-              color: "#fff",
-              textDecoration: "none",
-              padding: "10px 16px",
-              borderRadius: 10,
-              fontWeight: 600,
-            }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="8.5" cy="7" r="4" />
-              <path d="M20 8v6" />
-              <path d="M23 11h-6" />
-            </svg>
-            Buka Pengurusan Pengguna
-          </Link>
-        </section>
-      )}
-
-      {(profile?.role === "admin" || profile?.role === "pengetua") && (
-        <section
-          style={{
-            background: "#fff",
-            borderRadius: 16,
-            padding: 24,
-            marginTop: 24,
-            boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Pengurusan Bilik</h2>
-          <p style={{ marginBottom: 16 }}>
-            Tambah bilik baru dan urus status aktif bilik sekolah.
-          </p>
-
-          <Link
-            to="/admin/rooms"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              background: "#16325B",
-              color: "#fff",
-              textDecoration: "none",
-              padding: "10px 16px",
-              borderRadius: 10,
-              fontWeight: 600,
-            }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M3 21h18" />
-              <path d="M7 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16" />
-              <path d="M10 13h.01" />
-            </svg>
-            Buka Pengurusan Bilik
-          </Link>
-        </section>
-      )}
-
-      {(profile?.role === "admin" || profile?.role === "pengetua") && (
-        <section
-          style={{
-            background: "#fff",
-            borderRadius: 16,
-            padding: 24,
-            marginTop: 24,
-            boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Tetapan Sekolah</h2>
-          <p style={{ marginBottom: 16 }}>
-            Upload logo sekolah supaya dashboard nampak seperti milik sekolah anda.
-          </p>
-
-          <Link
-            to="/school/settings"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              background: "#16325B",
-              color: "#fff",
-              textDecoration: "none",
-              padding: "10px 16px",
-              borderRadius: 10,
-              fontWeight: 600,
-            }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-            Buka Tetapan Sekolah
-          </Link>
-        </section>
-      )}
 
       {isApproved && (isAdmin || isGuru) ? (
         <div style={cardStyle}>

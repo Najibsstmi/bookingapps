@@ -7,6 +7,7 @@ import AdminRoomsPage from "./pages/AdminRoomsPage"
 import SchoolSettingsPage from "./pages/SchoolSettingsPage"
 import ForgotPasswordPage from "./pages/ForgotPasswordPage"
 import UpdatePasswordPage from "./pages/UpdatePasswordPage"
+import AnalysisPage from "./pages/AnalysisPage"
 import ProtectedRoute from "./components/ProtectedRoute"
 import AppFooter from "./components/AppFooter"
 
@@ -47,6 +48,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AdminRoomsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analysis"
+              element={
+                <ProtectedRoute>
+                  <AnalysisPage />
                 </ProtectedRoute>
               }
             />
